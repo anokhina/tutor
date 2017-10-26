@@ -51,25 +51,37 @@ function saveAs(data, filename) {
 }
 
 function saveSettings() {
+    var uname = document.getElementById('uname').value;
+    if (! (uname && uname.trim().length > 0)) {
+        alert("No user name");
+        return;
+    }
     var settings = { words : [], wordrate : {} };
+    var uname = document.getElementById('uname').value;
+    if (uname) {
+        settings.uname = uname.trim();
+    }
+
     settings.words = wordsid;
     settings.wordrate = wordrate;
     var text = JSON.stringify( settings );
     var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
-    saveAs(blob, "configData.json");
+    var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
+    saveAs(blob, "configData"+todayDate+".json");
 }
 
 function loadSettings(cfg) { //TODO
 
     if ("words" in cfg) {
-        wordsid = [];
-        placedWords = 0;
-        document.querySelectorAll(".lword").forEach(function(e){
-            document.body.removeChild(e);
-        });
+        clearWords();
+    	document.getElementById('uname').value = "";
+        if ("uname" in cfg) {
+            document.getElementById('uname').value = cfg.uname;
+        }
 
         var wid = [];
         var wordDivs = [];
+
         if ("wordrate" in cfg) {
             wordrate = cfg.wordrate;
         } else {
@@ -86,12 +98,18 @@ function loadSettings(cfg) { //TODO
         });
 
         wordsid = wid;
+        placedWords = wid.length;
     } else {
         alert("Wrong settings");
     }
 }
 
 function wordClicked(p) {
+    var uname = document.getElementById('uname').value;
+    if (! (uname && uname.trim().length > 0)) {
+        alert("No user name");
+        return;
+    }
     var lc = lastClicked;
     if (lastClicked) {
         lastClicked.classList.remove("lastClicked");
@@ -219,45 +237,24 @@ function moveDiv(element) {
 }
 
 function startGame() {
-    var wordDivs = [];
-    var words = [];
-/*
-    var words = [
-      ["red", "красный"], 
-
-      ["blue", "синий"], 
-      ["orange", "оранжевый"], 
-      ["green", "зелёный"], 
-      ["white", "белый"],
-
-      ["black", "чёрный"],
-      ["yellow", "жёлтый"],
-      ["pink", "розовый"],
-      ["gray", "серый"],
-      ["cyan", "голубой"],
-      ["violet", "фиолетовый"],
-      ["gold", "золотой"],
-      ["indigo", "индиго"],
-
-      ["ivory", "слоновой кости"],
-      ["khaki", "хаки"],
-
-      ["magenta", "пурпурный"],
-      ["maroon", "тёмно-бордовый"],
-
-      ["olive", "оливковый"],
-      ["plum", "сливовый"],
-      ["purple", "багровый"],
-      ["wheat", "пшеничный"],
-      ["tomato", "томатный"],
-      ["turquoise", "бирюзовый"],
-
-      ["crimson", "малиновый"]
-    ];
-*/
     var text = "red,красный,plum,сливовый";
     text = "A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет";
-    var wordsTemp = text.split(",");
+    loadWors(text, ",");
+}
+function clearWords() {
+    wordsid = [];
+    placedWords = 0;
+    document.querySelectorAll(".lword").forEach(function(e){
+        document.body.removeChild(e);
+    });
+}
+function loadWors(text, splitter) {
+    clearWords();
+
+    var wordDivs = [];
+    var words = [];
+
+    var wordsTemp = text.split(splitter);
     for (var k = 0; k+1 < wordsTemp.length; k+=2) {
 	words.push([wordsTemp[k].trim(), wordsTemp[k+1].trim()]);
     }
@@ -297,6 +294,7 @@ function addWord(e0, e1, i, wordDivs, wordsid) {
 </script>
 
 <input type="file" id="files" name="files[]" />
+User: <input type="text" id="uname" name="uname" />
 <input type="button" onclick="saveSettings()" value="Save"/>
 
 <script>
@@ -321,6 +319,7 @@ function addWord(e0, e1, i, wordDivs, wordsid) {
                     loadSettings(cfg);
                 } catch (e) {
                     console.log("parse json error");
+                    loadWors(text, ",");
                 }
             };
         }
