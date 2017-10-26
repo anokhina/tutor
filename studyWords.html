@@ -14,6 +14,9 @@
     -ms-user-select: none;
     user-select: none;
 }
+.showword {
+    background-color: yellow;
+}
   </style>
 
 <body class="noselect">
@@ -33,7 +36,6 @@ utterance["ru"] = null;
 
 var lastClicked = null;
 var wordrate = {};
-var placedWords = 0;
 var wordsid = [];
 
 function saveAs(data, filename) {
@@ -68,9 +70,10 @@ function saveSettings() {
     var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
     var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
     saveAs(blob, "configData"+todayDate+".json");
+    return settings;
 }
 
-function loadSettings(cfg) { //TODO
+function loadSettings(cfg) { 
 
     if ("words" in cfg) {
         clearWords();
@@ -81,6 +84,7 @@ function loadSettings(cfg) { //TODO
 
         var wid = [];
         var wordDivs = [];
+        var other = [];
 
         if ("wordrate" in cfg) {
             wordrate = cfg.wordrate;
@@ -88,17 +92,34 @@ function loadSettings(cfg) { //TODO
             wordrate = {};
         }
 
-        cfg.words.some(function(e){
+        cfg.words.sort(function(a, b){
+            var awr = 0;
+            var bwr = 0;
+            if (a.id in wordrate) {
+                awr = wordrate[a.id];
+            }
+            if (b.id in wordrate) {
+                bwr = wordrate[b.id];
+            }
+            return (awr < bwr);
+	}).some(function(e){
             wid.push(e);
             if ("en" in e && "ru" in e && "id" in e) {
-                return !addWord(e.en, e.ru, e.id, wordDivs, wordsid);
+                return !addWord(e.en, e.ru, e.id, wordDivs, wordsid, other);
             } else {
                 return false;
             }
         });
+        var curcnt = document.querySelectorAll(".lword").length;
+        if (curcnt < 10) {
+            other.some(function(e){ 
+                curcnt ++;
+                addWord(e.en, e.ru, e.id, wordDivs, wordsid, null);
+                return (curcnt >= 10);
+            });
+        }
 
         wordsid = wid;
-        placedWords = wid.length;
     } else {
         alert("Wrong settings");
     }
@@ -116,6 +137,7 @@ function wordClicked(p) {
     }
     if (lc) {
         var w1id = p.id.substring(p.lang.length);
+        var w2id = lc.id.substring(lc.lang.length);
         if(lc === p) {
                 if (w1id in wordrate) {
                     var w1 = wordrate[w1id];
@@ -123,6 +145,15 @@ function wordClicked(p) {
                 } else {
                     wordrate[w1id] = -1;
                 }
+                var showwords = document.querySelectorAll(".id" + w2id);
+                showwords.forEach(function(e){
+		    e.classList.add("showword");
+                });
+                setTimeout(function(){
+                    showwords.forEach(function(e){
+                        e.classList.remove("showword");
+		    });
+                }, 3000);
 
             if (utterance[p.lang]) {
                 utterance[p.lang].text = p.innerHTML;
@@ -133,24 +164,23 @@ function wordClicked(p) {
             return;
         }
 
-        var w2id = lc.id.substring(lc.lang.length)
         if (p.lang != lc.lang) {
             if (w1id === w2id) {
                 setTimeout(function(){
                     document.body.removeChild(p);
                     document.body.removeChild(lc);
-                    placedWords --;
+                    placedWords = document.querySelectorAll(".lword").length;
                     if (placedWords <= 0) {
                         var startAgain = false;
                         for (k in wordrate) {
-                            if (wordrate[k] <= 0) {
+                            if (wordrate[k] <= 5) {
                                 startAgain = true;
                                 break;
                             }
                         }
-			saveSettings();
+			var cfg = saveSettings();
                         if (startAgain) {
-                            startGame();
+                            loadSettings(cfg);
                         } else {
                             alert("THE END");
                         }
@@ -209,6 +239,7 @@ function printWord(w, wid, lng, col) {
     element.style.fontSize = "xx-large";
     element.style.border = '1px solid #cfcfc6';
     element.classList.add("lword");
+    element.classList.add("id"+wid);
     document.body.appendChild(element);
     return element;
 }
@@ -238,12 +269,11 @@ function moveDiv(element) {
 
 function startGame() {
     var text = "red,красный,plum,сливовый";
-    text = "A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет";
+    //text = "A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет";
     loadWors(text, ",");
 }
 function clearWords() {
     wordsid = [];
-    placedWords = 0;
     document.querySelectorAll(".lword").forEach(function(e){
         document.body.removeChild(e);
     });
@@ -253,6 +283,7 @@ function loadWors(text, splitter) {
 
     var wordDivs = [];
     var words = [];
+    var other = [];
 
     var wordsTemp = text.split(splitter);
     for (var k = 0; k+1 < wordsTemp.length; k+=2) {
@@ -262,13 +293,17 @@ function loadWors(text, splitter) {
     words.some(function(e, idx, a) {
         i++;
 
-        return !addWord(e[0], e[1], i, wordDivs, wordsid);
+        return !addWord(e[0], e[1], i, wordDivs, wordsid, other);
     });
-    placedWords = i;
 }
-function addWord(e0, e1, i, wordDivs, wordsid) {
+function addWord(e0, e1, i, wordDivs, wordsid, other) {
         var cnt = true;
 	wordsid.push({ id: i, en: e0, ru: e1 });
+        if (other && i in wordrate && wordrate[i] > 5) {
+            other.push({ id: i, en: e0, ru: e1 });
+            return cnt;
+        }
+
             var ew = printWord(e0, i, "en", "red");
             var rw = printWord(e1, i, "ru", "blue");
             var j = 1;
