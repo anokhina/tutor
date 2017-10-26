@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+
+  <style type="text/css">
+   .lastClicked { 
+     color: green !important;
+   }
+.noselect {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+  </style>
+
+<body class="noselect">
+
+<script>
+var utterance = new Array();
+utterance["en"] = new SpeechSynthesisUtterance();
+utterance["en"].lang = 'en-UK';
+utterance["en"].rate = 1;
+
+/*
+utterance["ru"] = new SpeechSynthesisUtterance();
+utterance["ru"].lang = 'ru-Ru';
+utterance["ru"].rate = 1;
+*/
+utterance["ru"] = null;
+
+var lastClicked = null;
+var wordrate = {};
+var placedWords = 0;
+var wordsid = [];
+
+function saveAs(data, filename) {
+    var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
+    if (window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveBlob(blob, filename);
+    } else {
+        var elem = window.document.createElement('a');
+        elem.href = window.URL.createObjectURL(blob);
+        elem.download = filename;        
+        document.body.appendChild(elem);
+        elem.click();        
+        document.body.removeChild(elem);
+    }
+}
+
+function saveSettings() {
+    var settings = { words : [], wordrate : {} };
+    settings.words = wordsid;
+    settings.wordrate = wordrate;
+    var text = JSON.stringify( settings );
+    var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+    saveAs(blob, "configData.json");
+}
+
+function loadSettings(cfg) { //TODO
+
+    if ("words" in cfg) {
+        wordsid = [];
+        placedWords = 0;
+        document.querySelectorAll(".lword").forEach(function(e){
+            document.body.removeChild(e);
+        });
+
+        var wid = [];
+        var wordDivs = [];
+        if ("wordrate" in cfg) {
+            wordrate = cfg.wordrate;
+        } else {
+            wordrate = {};
+        }
+
+        cfg.words.some(function(e){
+            wid.push(e);
+            if ("en" in e && "ru" in e && "id" in e) {
+                return !addWord(e.en, e.ru, e.id, wordDivs, wordsid);
+            } else {
+                return false;
+            }
+        });
+
+        wordsid = wid;
+    } else {
+        alert("Wrong settings");
+    }
+}
+
+function wordClicked(p) {
+    var lc = lastClicked;
+    if (lastClicked) {
+        lastClicked.classList.remove("lastClicked");
+    }
+    if (lc) {
+        var w1id = p.id.substring(p.lang.length);
+        if(lc === p) {
+                if (w1id in wordrate) {
+                    var w1 = wordrate[w1id];
+                    wordrate[w1id] = w1-1;
+                } else {
+                    wordrate[w1id] = -1;
+                }
+
+            if (utterance[p.lang]) {
+                utterance[p.lang].text = p.innerHTML;
+                speechSynthesis.speak(utterance[p.lang]);
+            }
+            p.setAttribute("title", "" + wordrate[w1id]);
+            lastClicked.classList.add("lastClicked");
+            return;
+        }
+
+        var w2id = lc.id.substring(lc.lang.length)
+        if (p.lang != lc.lang) {
+            if (w1id === w2id) {
+                setTimeout(function(){
+                    document.body.removeChild(p);
+                    document.body.removeChild(lc);
+                    placedWords --;
+                    if (placedWords <= 0) {
+                        var startAgain = false;
+                        for (k in wordrate) {
+                            if (wordrate[k] <= 0) {
+                                startAgain = true;
+                                break;
+                            }
+                        }
+			saveSettings();
+                        if (startAgain) {
+                            startGame();
+                        } else {
+                            alert("THE END");
+                        }
+                    }
+                }, 500);
+                lastClicked = null;
+
+                if (w1id in wordrate) {
+                    var w1 = wordrate[w1id];
+                    wordrate[w1id] = w1+1;
+                } else {
+                    wordrate[w1id] = 1;
+                }
+            } else {
+                lastClicked = null;
+                if (w1id in wordrate) {
+                    var w1 = wordrate[w1id];
+                    wordrate[w1id] = w1-1;
+                } else {
+                    wordrate[w1id] = -1;
+                }
+                if (w2id in wordrate) {
+                    var w2 = wordrate[w2id];
+                    wordrate[w2id] = w2-1;
+                } else {
+                    wordrate[w2id] = -1;
+                }
+                p.setAttribute("title", "" + wordrate[w1id]);
+                lc.setAttribute("title", "" + wordrate[w2id]);
+            }
+        } else {
+            lastClicked = p;
+        }
+    } else {
+        lastClicked = p;
+    }
+    if (lastClicked) {
+        lastClicked.classList.add("lastClicked");
+    }
+}
+function printWord(w, wid, lng, col) {
+    var element = document.createElement("div");
+    element.setAttribute("onclick", "wordClicked(this)");
+    element.setAttribute("id", lng+wid);
+    element.setAttribute("lang", lng);
+    if (wid in wordrate) {
+        element.setAttribute("title", wordrate[wid]);
+    } else {
+        element.setAttribute("title", "0");
+    }
+    element.innerHTML = w;
+    element.style.color = col;
+    element.style.position = "absolute";
+    moveDiv(element);
+    element.style.fontWeight = "900";
+    element.style.fontSize = "xx-large";
+    element.style.border = '1px solid #cfcfc6';
+    element.classList.add("lword");
+    document.body.appendChild(element);
+    return element;
+}
+function getRect(p) {
+    var ret = {};
+    ret.X1 = p.offsetLeft;
+    ret.Y1 = p.offsetTop;
+    ret.X2 = p.offsetWidth + p.offsetLeft;
+    ret.Y2 = p.offsetHeight + p.offsetTop;
+    return ret;
+}
+function hasOverlap(arr, p) {
+    var RectA = getRect(p);
+    return arr.some(function(e, i, a){
+        var RectB = getRect(e);
+        var isOk = (Math.max(RectA.X1, RectB.X1) < Math.min(RectA.X2, RectB.X2) && Math.max(RectA.Y1, RectB.Y1) < Math.min(RectA.Y2, RectB.Y2));
+        if (isOk) {
+            return true;
+        }
+        return false;
+    });
+}
+function moveDiv(element) {
+    element.style.left = "" + Math.floor((Math.random() * (window.innerWidth-150)) + 1) + "px";
+    element.style.top = "" + Math.floor((Math.random() * (window.innerHeight-70)) + 21) + "px";
+}
+
+function startGame() {
+    var wordDivs = [];
+    var words = [];
+/*
+    var words = [
+      ["red", "красный"], 
+
+      ["blue", "синий"], 
+      ["orange", "оранжевый"], 
+      ["green", "зелёный"], 
+      ["white", "белый"],
+
+      ["black", "чёрный"],
+      ["yellow", "жёлтый"],
+      ["pink", "розовый"],
+      ["gray", "серый"],
+      ["cyan", "голубой"],
+      ["violet", "фиолетовый"],
+      ["gold", "золотой"],
+      ["indigo", "индиго"],
+
+      ["ivory", "слоновой кости"],
+      ["khaki", "хаки"],
+
+      ["magenta", "пурпурный"],
+      ["maroon", "тёмно-бордовый"],
+
+      ["olive", "оливковый"],
+      ["plum", "сливовый"],
+      ["purple", "багровый"],
+      ["wheat", "пшеничный"],
+      ["tomato", "томатный"],
+      ["turquoise", "бирюзовый"],
+
+      ["crimson", "малиновый"]
+    ];
+*/
+    var text = "red,красный,plum,сливовый";
+    text = "A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет";
+    var wordsTemp = text.split(",");
+    for (var k = 0; k+1 < wordsTemp.length; k+=2) {
+	words.push([wordsTemp[k].trim(), wordsTemp[k+1].trim()]);
+    }
+    var i = 0;
+    words.some(function(e, idx, a) {
+        i++;
+
+        return !addWord(e[0], e[1], i, wordDivs, wordsid);
+    });
+    placedWords = i;
+}
+function addWord(e0, e1, i, wordDivs, wordsid) {
+        var cnt = true;
+	wordsid.push({ id: i, en: e0, ru: e1 });
+            var ew = printWord(e0, i, "en", "red");
+            var rw = printWord(e1, i, "ru", "blue");
+            var j = 1;
+            var isover = hasOverlap(wordDivs, ew);
+            while(isover && j < 100) {
+                moveDiv(ew);
+                isover = hasOverlap(wordDivs, ew);
+                j=j+1;
+            }
+            if (j >= 100) cnt = false;
+            wordDivs.push(ew);
+            j = 1;
+            isover = hasOverlap(wordDivs, rw);
+            while(isover && j < 100) {
+                moveDiv(rw);
+                isover = hasOverlap(wordDivs, rw);
+            }
+            if (j >= 100) cnt = false;
+            wordDivs.push(rw);
+    return cnt;
+}
+
+</script>
+
+<input type="file" id="files" name="files[]" />
+<input type="button" onclick="saveSettings()" value="Save"/>
+
+<script>
+    function handleFileSelect(evt) {
+        if (window.File && window.FileReader && window.FileList && window.Blob) {
+
+        } else {
+            alert('The File APIs are not fully supported in this browser.');
+            return;
+        }
+
+        var files = evt.target.files;
+
+        var output = [];
+        for (var i = 0, f; f = files[i]; i++) {
+            var reader = new FileReader();
+            reader.readAsText (f);
+            reader.onload = function(e) {
+                var text = reader.result;
+                try {
+                    var cfg = JSON.parse(text);
+                    loadSettings(cfg);
+                } catch (e) {
+                    console.log("parse json error");
+                }
+            };
+        }
+    }
+
+    document.getElementById('files').addEventListener('change', handleFileSelect, false);
+</script>
+
+<script>
+startGame();
+</script>
+</body>
+</html>
