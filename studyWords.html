@@ -5,6 +5,8 @@
   <style type="text/css">
    .lastClicked { 
      color: green !important;
+     border-radius: 9px;
+     border: 3px solid green !important;
    }
 .noselect {
     -webkit-touch-callout: none;
@@ -228,6 +230,8 @@ function wordClicked(p) {
     }
 }
 function printWord(w, wid, lng, col) {
+    var isPicture = w.startsWith("img:");
+
     var element = document.createElement("div");
     element.setAttribute("onclick", "wordClicked(this)");
     element.setAttribute("id", lng+wid);
@@ -237,7 +241,10 @@ function printWord(w, wid, lng, col) {
     } else {
         element.setAttribute("title", "0");
     }
-    element.innerHTML = w;
+
+    if (!isPicture) {
+        element.innerHTML = w;
+    }
     element.style.color = col;
     element.style.position = "absolute";
     moveDiv(element);
@@ -247,6 +254,12 @@ function printWord(w, wid, lng, col) {
     element.classList.add("lword");
     element.classList.add("id"+wid);
     document.body.appendChild(element);
+
+    if (isPicture) {
+        var img=document.createElement("img");
+        img.src=w.substring(4);
+        element.appendChild(img);
+    }
     return element;
 }
 function getRect(p) {
@@ -274,12 +287,13 @@ function moveDiv(element) {
 }
 
 function startGame() {
-    var text = "red,красный,plum,сливовый";
+    var text = "red,красный,plum,сливовый,img:zzz1.png,тест";
     //text = "A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет";
     loadWors(text, ",");
 }
 function clearWords() {
     wordsid = [];
+    wordrate = {};
     document.querySelectorAll(".lword").forEach(function(e){
         document.body.removeChild(e);
     });
@@ -326,6 +340,7 @@ function addWord(e0, e1, i, wordDivs, wordsid, other) {
             while(isover && j < 100) {
                 moveDiv(rw);
                 isover = hasOverlap(wordDivs, rw);
+                j=j+1;
             }
             if (j >= 100) cnt = false;
             wordDivs.push(rw);
