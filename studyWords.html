@@ -133,20 +133,16 @@ function wordClicked(p) {
         alert("No user name");
         return;
     }
-    var lc = lastClicked;
     if (lastClicked) {
-        lastClicked.classList.remove("lastClicked");
-    }
-    if (lc) {
-        var w1id = p.id.substring(p.lang.length);
-        var w2id = lc.id.substring(lc.lang.length);
+        lastClicked.obj.classList.remove("lastClicked");
+        var lc = lastClicked.obj;
+        let w1id = p.id.substring(p.lang.length);
+        let w2id = lc.id.substring(lc.lang.length);
         if(lc === p) {
-                if (w1id in wordrate) {
-                    var w1 = wordrate[w1id];
-                    wordrate[w1id] = w1-1;
-                } else {
-                    wordrate[w1id] = -1;
-                }
+            lastClicked.cnt = lastClicked.cnt + 1;
+            let lccnt = lastClicked.cnt;
+
+            if (lccnt > 2) {
                 var showwords = document.querySelectorAll(".id" + w2id);
                 showwords.forEach(function(e){
 		    e.classList.add("showword");
@@ -156,13 +152,21 @@ function wordClicked(p) {
                         e.classList.remove("showword");
 		    });
                 }, 3000);
+            } else {
+                if (w1id in wordrate) {
+                    var w1 = wordrate[w1id];
+                    wordrate[w1id] = w1-1;
+                } else {
+                    wordrate[w1id] = -1;
+                }
+            }
 
             if (utterance[p.lang]) {
                 utterance[p.lang].text = p.innerHTML;
                 speechSynthesis.speak(utterance[p.lang]);
             }
             p.setAttribute("title", "" + wordrate[w1id]);
-            lastClicked.classList.add("lastClicked");
+            lastClicked.obj.classList.add("lastClicked");
             return;
         }
 
@@ -214,13 +218,13 @@ function wordClicked(p) {
                 lc.setAttribute("title", "" + wordrate[w2id]);
             }
         } else {
-            lastClicked = p;
+            lastClicked = {obj : p, cnt : 1};
         }
     } else {
-        lastClicked = p;
+        lastClicked = {obj : p, cnt : 1};
     }
     if (lastClicked) {
-        lastClicked.classList.add("lastClicked");
+        lastClicked.obj.classList.add("lastClicked");
     }
 }
 function printWord(w, wid, lng, col) {
