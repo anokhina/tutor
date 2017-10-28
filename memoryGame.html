@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+
+  <style type="text/css">
+html, body {
+    height:99%;
+    width:99%;
+} 
+.lastClicked { 
+    color: green !important;
+    border-radius: 9px;
+    border: 3px solid green !important;
+}
+.noselect {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+.showword {
+    background-color: yellow;
+}
+.busy {
+    background-color: #f9f6f0;
+}
+  </style>
+
+<body class="noselect">
+
+<script>
+var utterance = new Array();
+utterance["en"] = new SpeechSynthesisUtterance();
+utterance["en"].lang = 'en-UK';
+utterance["en"].rate = 1;
+
+/*
+utterance["ru"] = new SpeechSynthesisUtterance();
+utterance["ru"].lang = 'ru-Ru';
+utterance["ru"].rate = 1;
+*/
+utterance["ru"] = null;
+
+var lastClicked = null;
+var wordrate = {};
+var wordsid = [];
+
+function saveAs(data, filename) {
+    var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
+    if (window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveBlob(blob, filename);
+    } else {
+        var elem = window.document.createElement('a');
+        elem.href = window.URL.createObjectURL(blob);
+        elem.download = filename;        
+        document.body.appendChild(elem);
+        elem.click();        
+        document.body.removeChild(elem);
+    }
+}
+
+function saveSettings() {
+    var uname = document.getElementById('uname').value;
+    if (! (uname && uname.trim().length > 0)) {
+        alert("No user name");
+        return;
+    }
+    var settings = { words : [], wordrate : {} };
+    var uname = document.getElementById('uname').value;
+    if (uname) {
+        settings.uname = uname.trim();
+    }
+
+    settings.words = wordsid;
+    settings.wordrate = wordrate;
+    var text = JSON.stringify( settings );
+    var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+    var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
+    var filenameUname = uname;
+    //var filenameUname = uname.replace(/[^a-zA-Z0-9_-а-яА-Я]/gi, '_').toLowerCase();
+    saveAs(blob, "configData"+filenameUname+todayDate+".json");
+    return settings;
+}
+
+function loadSettings(cfg) { 
+
+    if ("words" in cfg) {
+        clearWords();
+    	document.getElementById('uname').value = "";
+        if ("uname" in cfg) {
+            document.getElementById('uname').value = cfg.uname;
+        }
+
+        if ("wordrate" in cfg) {
+            wordrate = cfg.wordrate;
+        } else {
+            wordrate = {};
+        }
+		
+		wordsid = cfg.words;
+		startGameAgain();
+
+    } else {
+        alert("Wrong settings");
+    }
+}
+
+function clickCell(cell) {
+    var arr = cell.getElementsByClassName("lword");
+	if (arr.length > 0) {
+		wordClicked(arr[0]);
+	}
+}
+function wordClicked(p) {
+    var uname = document.getElementById('uname').value;
+    if (! (uname && uname.trim().length > 0)) {
+        alert("No user name");
+        return;
+    }
+	//element.style.visibility = 'hidden';
+	p.style.visibility = 'visible';
+	var sayIt = utterance[p.lang] && p.innerText && p.innerText.length > 1;
+	if (sayIt) {
+		utterance[p.lang].text = p.innerText;
+		speechSynthesis.speak(utterance[p.lang]);
+	}
+		
+    if (lastClicked) {
+        lastClicked.obj.classList.remove("lastClicked");
+        var lc = lastClicked.obj;
+        let w1id = p.id.substring(p.lang.length);
+        let w2id = lc.id.substring(lc.lang.length);
+        if(lc === p) {
+            lastClicked.cnt = lastClicked.cnt + 1;
+            let lccnt = lastClicked.cnt;
+
+            if (lccnt > 2) {
+                var showwords = document.querySelectorAll(".id" + w2id);
+                showwords.forEach(function(e){
+					e.classList.add("showword");
+					e.style.visibility = 'visible';
+                });
+                setTimeout(function(){
+                    showwords.forEach(function(e){
+					    try {
+							e.classList.remove("showword");
+							if (p !== e) {
+								e.style.visibility = 'hidden';
+							}
+						} catch (e) {}
+					});
+                }, 4000);
+            } else {
+                if (w1id in wordrate) {
+                    var w1 = wordrate[w1id];
+                    wordrate[w1id] = w1-1;
+                } else {
+                    wordrate[w1id] = -1;
+                }
+            }
+
+            if (!sayIt && utterance[p.lang] && p.innerText) {
+                utterance[p.lang].text = p.innerText;
+                speechSynthesis.speak(utterance[p.lang]);
+            }
+            p.setAttribute("title", "" + wordrate[w1id]);
+            lastClicked.obj.classList.add("lastClicked");
+            return;
+        } else if (p.lang != lc.lang) {
+            if (w1id === w2id) {
+                setTimeout(function(){
+				    let p1 = p.parentElement;
+					let p2 = lc.parentElement;
+                    p1.removeChild(p);
+                    p2.removeChild(lc);
+					p1.classList.remove("busy");
+					p2.classList.remove("busy");
+                    placedWords = document.querySelectorAll(".lword").length;
+                    if (placedWords <= 0) {
+                        var startAgain = false;
+						wordsid.some(function(e){
+							if (e.id in wordrate) {
+								if (wordrate[e.id] <= 5) {
+									startAgain = true;
+									return true;
+								}
+							} else {
+								startAgain = true;
+								return true;
+							}
+							return false;
+						});
+						var cfg = saveSettings();
+                        if (startAgain) {
+							startGameAgain();
+                        } else {
+                            alert("THE END");
+                        }
+                    }
+                }, 1000);
+                lastClicked = null;
+
+                if (w1id in wordrate) {
+                    var w1 = wordrate[w1id];
+                    wordrate[w1id] = w1+1;
+                } else {
+                    wordrate[w1id] = 1;
+                }
+            } else {
+                lastClicked = null;
+				/*
+                if (w1id in wordrate) {
+                    var w1 = wordrate[w1id];
+                    wordrate[w1id] = w1-1;
+                } else {
+                    wordrate[w1id] = -1;
+                }
+                if (w2id in wordrate) {
+                    var w2 = wordrate[w2id];
+                    wordrate[w2id] = w2-1;
+                } else {
+                    wordrate[w2id] = -1;
+                }
+				*/
+                p.setAttribute("title", "" + wordrate[w1id]);
+                lc.setAttribute("title", "" + wordrate[w2id]);
+				
+				setTimeout(function(){
+					try {
+						p.style.visibility = 'hidden';
+						lc.style.visibility = 'hidden';
+					} catch (e) {}
+				}, 1000);
+            }
+        } else {
+			setTimeout(function(){
+				try {
+					p.style.visibility = 'hidden';
+					lc.style.visibility = 'hidden';
+				} catch (e) {}
+			}, 1000);
+			lastClicked = null;
+        }
+    } else {
+        lastClicked = {obj : p, cnt : 1};
+    }
+    if (lastClicked) {
+        lastClicked.obj.classList.add("lastClicked");
+    }
+}
+function printWord(parentObj, w, wid, lng, col) {
+    var isPicture = w.startsWith("img:");
+
+    var element = document.createElement("div");
+    //element.setAttribute("onclick", "wordClicked(this)");
+    element.setAttribute("id", lng+wid);
+    element.setAttribute("lang", lng);
+    if (wid in wordrate) {
+        element.setAttribute("title", wordrate[wid]);
+    } else {
+        element.setAttribute("title", "0");
+    }
+
+    if (!isPicture) {
+        element.innerHTML = w;
+    }
+    element.style.color = col;
+    element.style.fontWeight = "900";
+    element.style.fontSize = "xx-large";
+    element.style.border = '1px solid #cfcfc6';
+	element.style.visibility = 'hidden';
+    element.classList.add("lword");
+    element.classList.add("id"+wid);
+    parentObj.appendChild(element);
+
+    if (isPicture) {
+        var img=document.createElement("img");
+        img.src=w.substring(4);
+        element.appendChild(img);
+    }
+    return element;
+}
+
+function clearWords() {
+    wordsid = [];
+    wordrate = {};
+    document.querySelectorAll(".lword").forEach(function(e){
+        e.parentElement.removeChild(e);
+    });
+}
+function getWords(text, splitter) {
+    let wordsTemp = text.split(splitter);
+	let words = [];
+    for (let k = 0, i = 0; k+1 < wordsTemp.length; k+=2) {
+		i++;
+		words.push({ id: i, en: wordsTemp[k].trim(), ru: wordsTemp[k+1].trim()});
+    }
+	return words;
+}
+function startGame(text, splitter) {
+	clearWords();
+	wordsid = getWords(text, splitter);
+	startGameAgain();
+}
+function startGameAgain() {
+	fillTable(wordsid.sort(function(a,b){ 
+		var awr = 0;
+		var bwr = 0;
+		if (a.id in wordrate) {
+			awr = wordrate[a.id];
+		}
+		if (b.id in wordrate) {
+			bwr = wordrate[b.id];
+		}
+		//console.log(a,b,awr,bwr);
+		if (awr == 0 && bwr == 0) {
+			return a.id - b.id;
+		}
+		if (awr >= 5 && bwr >= 5) {
+			return (bwr - awr);
+		}
+		if (awr >= 5 || awr == 0) {
+			return 1;
+		}
+		if (bwr >= 5 || bwr == 0) {
+			return -1;
+		}
+		//console.log(">>>",a,b,awr,bwr, (bwr - awr));
+		return (bwr - awr);
+	}));
+}
+/*
+{
+id: 1,
+en: "",
+ru: ""
+}
+*/
+function fillTableWords(words, gamesizeX, gamesizeY, table) {
+    var wordSize = gamesizeX * gamesizeY / 2;
+    var warr = new Array(wordSize * 2);
+    var tmphash = new Array(wordSize);
+    tmphash.fill(0);
+    for(let i = 0; i < warr.length; i++) {
+        warr[i] = null;
+        for(let j = 0; j < 100 && warr[i] === null ; j++) {
+            let idx = parseInt(Math.random() * (wordSize));
+            if (tmphash[idx] < 2) {
+                warr[i] = { idx : idx, cnt : tmphash[idx]};
+                tmphash[idx] = tmphash[idx] + 1;
+            }
+        }
+    }
+	//console.log(warr);
+    if (words) {
+        if (words.length < wordSize) {
+            alert("Wrong game size for set of words which length is " + words.length);
+        } else {
+            for(let i = 0; i < wordSize * 2; i++) {
+                let y = parseInt(i / gamesizeX);
+                let x = i % gamesizeX;
+				let cell = table.rows[y].cells[x];
+				if (warr[i].cnt == 0) {
+					var ew = printWord(cell, words[warr[i].idx].en, words[warr[i].idx].id, "en", "red");
+				} else {
+					var rw = printWord(cell, words[warr[i].idx].ru, words[warr[i].idx].id, "ru", "blue");
+				}
+				cell.classList.add("busy");
+				//console.log(gamesizeX, i, y, x, warr[i]);
+            }
+        }
+    }
+}
+function fillTable(words) {
+    var controls = document.getElementById("controls");
+
+    var gamesizeX = parseInt(document.getElementById("gamesizeX").value);
+    var gamesizeY = parseInt(document.getElementById("gamesizeY").value);
+//3x3 = 9 5x5 = 25 7x7=49
+    if (isNaN(gamesizeX) || isNaN(gamesizeY) || gamesizeX < 2 || gamesizeX > 7 || gamesizeY < 2 || gamesizeY > 7 || 
+        gamesizeX == 3 && gamesizeY == 3 ||
+        gamesizeX == 5 && gamesizeY == 5 ||
+        gamesizeX == 7 && gamesizeY == 7 
+    ) {
+        alert("Wrong game size");
+        return;
+    }
+
+    var table = document.getElementById("wordTable");
+    while(table.rows.length > 0) {
+        table.deleteRow(0);
+    }
+
+    let hpct = 100 / gamesizeY;
+    let wpct = 100 / gamesizeX;
+    for(let i = 0; i < gamesizeY; i++) {
+        let row = table.insertRow(i);
+        row.style.width = "" + hpct + "%";
+        for(let j = 0; j < gamesizeX; j++) {
+            let cell = row.insertCell(j);
+            cell.style.width = "" + wpct + "%";
+            cell.style.textAlign = 'center';
+            cell.setAttribute("onclick", "clickCell(this)");
+
+//            cell.innerHTML = "" + i +":" + j;
+        }
+    }
+    table.style.height = "" + (document.body.offsetHeight - controls.offsetHeight - 5) + "px";
+	
+	fillTableWords(words, gamesizeX, gamesizeY, table);
+}
+</script>
+
+<div id="controls">
+<input type="file" id="files" name="files[]" />
+User: <input type="text" id="uname" name="uname" />
+Size: <input type="number" id="gamesizeX" name="gamesizeX" value="4" min=2 max=7 />
+<input type="number" id="gamesizeY" name="gamesizeY" value="3" min=2 max=7 />
+<input type="button" onclick="saveSettings()" value="Save"/>
+<input type="button" onclick="loadSettings(saveSettings())" value="Start"/>
+</div>
+
+<table id="wordTable" border="1" width="99%" style="margin-top: .5em;" >
+</table>
+
+<script>
+    function handleFileSelect(evt) {
+        if (window.File && window.FileReader && window.FileList && window.Blob) {
+
+        } else {
+            alert('The File APIs are not fully supported in this browser.');
+            return;
+        }
+
+        var files = evt.target.files;
+
+        var output = [];
+        for (var i = 0, f; f = files[i]; i++) {
+            var reader = new FileReader();
+            reader.readAsText (f);
+            reader.onload = function(e) {
+                var text = reader.result;
+                try {
+                    var cfg = JSON.parse(text);
+                    loadSettings(cfg);
+                } catch (e) {
+                    console.log("parse json error");
+                    startGame(text, ",");
+                }
+            };
+        }
+    }
+
+    document.getElementById('files').addEventListener('change', handleFileSelect, false);
+</script>
+
+<script>
+startGame("A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет", ",");
+</script>
+</body>
+</html>
