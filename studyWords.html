@@ -3,11 +3,13 @@
 <meta charset="UTF-8">
 
   <style type="text/css">
-   .lastClicked { 
-     color: green !important;
-     border-radius: 9px;
-     border: 3px solid green !important;
-   }
+.lastClicked { 
+    color: green !important;
+    border: 3px solid green !important;
+}
+.lworden { 
+    border-radius: 9px;
+}
 .noselect {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -65,13 +67,17 @@ function saveSettings() {
     if (uname) {
         settings.uname = uname.trim();
     }
+    var theme = document.getElementById('theme').value;
+    if (theme) {
+        settings.theme = theme.trim();
+    }
 
     settings.words = wordsid;
     settings.wordrate = wordrate;
     var text = JSON.stringify( settings );
     var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
     var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
-    var filenameUname = uname;
+    var filenameUname = "-" + uname + "-" + theme + "-";
     //var filenameUname = uname.replace(/[^a-zA-Z0-9_-а-яА-Я]/gi, '_').toLowerCase();
     saveAs(blob, "configData"+filenameUname+todayDate+".json");
     return settings;
@@ -84,6 +90,11 @@ function loadSettings(cfg) {
     	document.getElementById('uname').value = "";
         if ("uname" in cfg) {
             document.getElementById('uname').value = cfg.uname;
+        }
+
+    	document.getElementById('theme').value = "";
+        if ("theme" in cfg) {
+            document.getElementById('theme').value = cfg.theme;
         }
 
         var wid = [];
@@ -135,6 +146,11 @@ function wordClicked(p) {
         alert("No user name");
         return;
     }
+	var sayIt = utterance[p.lang] && p.innerText && p.innerText.length > 1;
+	if (sayIt) {
+		utterance[p.lang].text = p.innerText;
+		speechSynthesis.speak(utterance[p.lang]);
+	}
     if (lastClicked) {
         lastClicked.obj.classList.remove("lastClicked");
         var lc = lastClicked.obj;
@@ -163,7 +179,7 @@ function wordClicked(p) {
                 }
             }
 
-            if (utterance[p.lang]) {
+            if (!sayIt && utterance[p.lang]) {
                 utterance[p.lang].text = p.innerHTML;
                 speechSynthesis.speak(utterance[p.lang]);
             }
@@ -252,6 +268,7 @@ function printWord(w, wid, lng, col) {
     element.style.fontSize = "xx-large";
     element.style.border = '1px solid #cfcfc6';
     element.classList.add("lword");
+    element.classList.add("lword"+lng);
     element.classList.add("id"+wid);
     document.body.appendChild(element);
 
@@ -351,6 +368,7 @@ function addWord(e0, e1, i, wordDivs, wordsid, other) {
 
 <input type="file" id="files" name="files[]" />
 User: <input type="text" id="uname" name="uname" />
+Theme: <input type="text" id="theme" name="theme" />
 <input type="button" onclick="saveSettings()" value="Save"/>
 
 <script>
@@ -367,6 +385,11 @@ User: <input type="text" id="uname" name="uname" />
         var output = [];
         for (var i = 0, f; f = files[i]; i++) {
             var reader = new FileReader();
+            var themename = f.name;
+            var pntidx = themename.indexOf(".");
+            if (pntidx >= 0) {
+                themename = themename.substring(0, pntidx);
+            }
             reader.readAsText (f);
             reader.onload = function(e) {
                 var text = reader.result;
@@ -374,6 +397,8 @@ User: <input type="text" id="uname" name="uname" />
                     var cfg = JSON.parse(text);
                     loadSettings(cfg);
                 } catch (e) {
+                    document.getElementById('theme').value = themename;
+
                     console.log("parse json error");
                     loadWors(text, ",");
                 }
