@@ -21,22 +21,27 @@
 .showword {
     background-color: yellow;
 }
+.inline {
+    display: inline-block;
+    padding: 2px;
+}
   </style>
 
 <body class="noselect">
 
 <script>
-var utterance = new Array();
-utterance["en"] = new SpeechSynthesisUtterance();
-utterance["en"].lang = 'en-UK';
-utterance["en"].rate = 1;
+function makeUtterance(lang, rate) {
+    var ret = new SpeechSynthesisUtterance();
+    ret.lang = lang;
+    ret.rate = rate;
+    return ret;
+}
 
-/*
-utterance["ru"] = new SpeechSynthesisUtterance();
-utterance["ru"].lang = 'ru-Ru';
-utterance["ru"].rate = 1;
-*/
-utterance["ru"] = null;
+var utterance = {
+    en: makeUtterance("en-UK", 1)
+    //, ru: makeUtterance("ru-Ru", 1)
+    , ru: null
+};
 
 var lastClicked = null;
 var wordrate = {};
@@ -87,17 +92,16 @@ function loadSettings(cfg) {
 
     if ("words" in cfg) {
         clearWords();
-    	document.getElementById('uname').value = "";
+        document.getElementById('uname').value = "";
         if ("uname" in cfg) {
             document.getElementById('uname').value = cfg.uname;
         }
 
-    	document.getElementById('theme').value = "";
+        document.getElementById('theme').value = "";
         if ("theme" in cfg) {
             document.getElementById('theme').value = cfg.theme;
         }
 
-        var wid = [];
         var wordDivs = [];
         var other = [];
 
@@ -107,7 +111,7 @@ function loadSettings(cfg) {
             wordrate = {};
         }
 
-        cfg.words.sort(function(a, b){
+        let words = cfg.words.sort(function(a, b){
             var awr = 0;
             var bwr = 0;
             if (a.id in wordrate) {
@@ -117,24 +121,8 @@ function loadSettings(cfg) {
                 bwr = wordrate[b.id];
             }
             return (awr < bwr);
-	}).some(function(e){
-            wid.push(e);
-            if ("en" in e && "ru" in e && "id" in e) {
-                return !addWord(e.en, e.ru, e.id, wordDivs, wordsid, other);
-            } else {
-                return false;
-            }
         });
-        var curcnt = document.querySelectorAll(".lword").length;
-        if (curcnt < 10) {
-            other.some(function(e){ 
-                curcnt ++;
-                addWord(e.en, e.ru, e.id, wordDivs, wordsid, null);
-                return (curcnt >= 10);
-            });
-        }
-
-        wordsid = wid;
+        if (words.length > 0) addWord(words[0], wordDivs, wordsid, other, words, 1);
     } else {
         alert("Wrong settings");
     }
@@ -146,109 +134,112 @@ function wordClicked(p) {
         alert("No user name");
         return;
     }
-	var sayIt = utterance[p.lang] && p.innerText && p.innerText.length > 1;
-	if (sayIt) {
-		utterance[p.lang].text = p.innerText;
-		speechSynthesis.speak(utterance[p.lang]);
-	}
-    if (lastClicked) {
-        lastClicked.obj.classList.remove("lastClicked");
-        var lc = lastClicked.obj;
-        let w1id = p.id.substring(p.lang.length);
-        let w2id = lc.id.substring(lc.lang.length);
-        if(lc === p) {
-            lastClicked.cnt = lastClicked.cnt + 1;
-            let lccnt = lastClicked.cnt;
+    var sayIt = utterance[p.lang] && p.innerText && p.innerText.length > 1;
+    if (sayIt) {
+        utterance[p.lang].text = p.innerText;
+        speechSynthesis.speak(utterance[p.lang]);
+    }
+    p.classList.add("lastClicked");
+    setTimeout(function(){
+        if (lastClicked) {
+            lastClicked.obj.classList.remove("lastClicked");
+            var lc = lastClicked.obj;
+            let w1id = p.id.substring(p.lang.length);
+            let w2id = lc.id.substring(lc.lang.length);
+            if(lc === p) {
+                lastClicked.cnt = lastClicked.cnt + 1;
+                let lccnt = lastClicked.cnt;
 
-            if (lccnt > 2) {
-                var showwords = document.querySelectorAll(".id" + w2id);
-                showwords.forEach(function(e){
-		    e.classList.add("showword");
-                });
-                setTimeout(function(){
+                if (lccnt > 2) {
+                    var showwords = document.querySelectorAll(".id" + w2id);
                     showwords.forEach(function(e){
-                        e.classList.remove("showword");
-		    });
-                }, 3000);
-            } else {
-                if (w1id in wordrate) {
-                    var w1 = wordrate[w1id];
-                    wordrate[w1id] = w1-1;
+                e.classList.add("showword");
+                    });
+                    setTimeout(function(){
+                        showwords.forEach(function(e){
+                            e.classList.remove("showword");
+                });
+                    }, 3000);
                 } else {
-                    wordrate[w1id] = -1;
-                }
-            }
-
-            if (!sayIt && utterance[p.lang]) {
-                utterance[p.lang].text = p.innerHTML;
-                speechSynthesis.speak(utterance[p.lang]);
-            }
-            p.setAttribute("title", "" + wordrate[w1id]);
-            lastClicked.obj.classList.add("lastClicked");
-            return;
-        }
-
-        if (p.lang != lc.lang) {
-            if (w1id === w2id) {
-                setTimeout(function(){
-                    document.body.removeChild(p);
-                    document.body.removeChild(lc);
-                    placedWords = document.querySelectorAll(".lword").length;
-                    if (placedWords <= 0) {
-                        var startAgain = false;
-                        for (k in wordrate) {
-                            if (wordrate[k] <= 5) {
-                                startAgain = true;
-                                break;
-                            }
-                        }
-			var cfg = saveSettings();
-                        if (startAgain) {
-                            loadSettings(cfg);
-                        } else {
-                            alert("THE END");
-                        }
+                    if (w1id in wordrate) {
+                        var w1 = wordrate[w1id];
+                        wordrate[w1id] = w1-1;
+                    } else {
+                        wordrate[w1id] = -1;
                     }
-                }, 500);
-                lastClicked = null;
+                }
 
-                if (w1id in wordrate) {
-                    var w1 = wordrate[w1id];
-                    wordrate[w1id] = w1+1;
-                } else {
-                    wordrate[w1id] = 1;
-                }
-            } else {
-                lastClicked = null;
-                if (w1id in wordrate) {
-                    var w1 = wordrate[w1id];
-                    wordrate[w1id] = w1-1;
-                } else {
-                    wordrate[w1id] = -1;
-                }
-                if (w2id in wordrate) {
-                    var w2 = wordrate[w2id];
-                    wordrate[w2id] = w2-1;
-                } else {
-                    wordrate[w2id] = -1;
+                if (!sayIt && utterance[p.lang]) {
+                    utterance[p.lang].text = p.innerHTML;
+                    speechSynthesis.speak(utterance[p.lang]);
                 }
                 p.setAttribute("title", "" + wordrate[w1id]);
-                lc.setAttribute("title", "" + wordrate[w2id]);
+                lastClicked.obj.classList.add("lastClicked");
+                return;
+            }
+
+            if (p.lang != lc.lang) {
+                if (w1id === w2id) {
+                    setTimeout(function(){
+                        document.body.removeChild(p);
+                        document.body.removeChild(lc);
+                        placedWords = document.querySelectorAll(".lword").length;
+                        if (placedWords <= 0) {
+                            var startAgain = false;
+                            for (k in wordrate) {
+                                if (wordrate[k] <= 5) {
+                                    startAgain = true;
+                                    break;
+                                }
+                            }
+                            var cfg = saveSettings();
+                            if (startAgain) {
+                                loadSettings(cfg);
+                            } else {
+                                alert("THE END");
+                            }
+                        }
+                    }, 500);
+                    lastClicked = null;
+
+                    if (w1id in wordrate) {
+                        var w1 = wordrate[w1id];
+                        wordrate[w1id] = w1+1;
+                    } else {
+                        wordrate[w1id] = 1;
+                    }
+                } else {
+                    lastClicked = null;
+                    if (w1id in wordrate) {
+                        var w1 = wordrate[w1id];
+                        wordrate[w1id] = w1-1;
+                    } else {
+                        wordrate[w1id] = -1;
+                    }
+                    if (w2id in wordrate) {
+                        var w2 = wordrate[w2id];
+                        wordrate[w2id] = w2-1;
+                    } else {
+                        wordrate[w2id] = -1;
+                    }
+                    p.setAttribute("title", "" + wordrate[w1id]);
+                    lc.setAttribute("title", "" + wordrate[w2id]);
+                }
+                p.classList.remove("lastClicked");
+            } else {
+                lastClicked = {obj : p, cnt : 1};
             }
         } else {
             lastClicked = {obj : p, cnt : 1};
         }
-    } else {
-        lastClicked = {obj : p, cnt : 1};
-    }
-    if (lastClicked) {
-        lastClicked.obj.classList.add("lastClicked");
-    }
+        if (lastClicked) {
+            lastClicked.obj.classList.add("lastClicked");
+        }
+    }, 100);
 }
-function printWord(w, wid, lng, col) {
+function printWord(element, w, wid, lng, col, callback) {
     var isPicture = w.startsWith("img:");
 
-    var element = document.createElement("div");
     element.setAttribute("onclick", "wordClicked(this)");
     element.setAttribute("id", lng+wid);
     element.setAttribute("lang", lng);
@@ -271,20 +262,34 @@ function printWord(w, wid, lng, col) {
     element.classList.add("lword"+lng);
     element.classList.add("id"+wid);
     document.body.appendChild(element);
+    moveDiv(element, {x: "0px", y: "0px"});
 
     if (isPicture) {
         var img=document.createElement("img");
+        img.onload = function(){
+            moveDiv(element);
+            //console.log("iiiiiiii>", getRect(element));
+            if (callback) {
+                callback();
+            }
+        };
         img.src=w.substring(4);
         element.appendChild(img);
+    } else {
+        moveDiv(element);
+        if (callback) {
+            callback();
+        }
     }
-    return element;
 }
 function getRect(p) {
     var ret = {};
     ret.X1 = p.offsetLeft;
     ret.Y1 = p.offsetTop;
-    ret.X2 = p.offsetWidth + p.offsetLeft;
-    ret.Y2 = p.offsetHeight + p.offsetTop;
+    ret.w = p.style.width;
+    ret.h = p.style.height;
+    ret.X2 = p.offsetWidth + ret.X1;
+    ret.Y2 = p.offsetHeight + ret.Y1;
     return ret;
 }
 function hasOverlap(arr, p) {
@@ -292,15 +297,23 @@ function hasOverlap(arr, p) {
     return arr.some(function(e, i, a){
         var RectB = getRect(e);
         var isOk = (Math.max(RectA.X1, RectB.X1) < Math.min(RectA.X2, RectB.X2) && Math.max(RectA.Y1, RectB.Y1) < Math.min(RectA.Y2, RectB.Y2));
+        //console.log(">>>>>>", isOk, RectA, RectB, p.id, e.id);
         if (isOk) {
             return true;
         }
         return false;
     });
 }
-function moveDiv(element) {
-    element.style.left = "" + Math.floor((Math.random() * (window.innerWidth-150)) + 1) + "px";
-    element.style.top = "" + Math.floor((Math.random() * (window.innerHeight-70)) + 21) + "px";
+var yWordOffset = 21;
+function moveDiv(element, pnt) {
+    if (pnt) {
+        element.style.left = pnt.x;
+        element.style.top = pnt.y;
+    } else {
+        var rect = getRect(element);
+        element.style.left = "" + Math.floor((Math.random() * (window.innerWidth-Math.max(150, rect.w))) + 1) + "px";
+        element.style.top = "" + Math.floor((Math.random() * (window.innerHeight-yWordOffset - rect.h - 1)) + yWordOffset) + "px";
+    }
 }
 
 function startGame() {
@@ -314,6 +327,10 @@ function clearWords() {
     document.querySelectorAll(".lword").forEach(function(e){
         document.body.removeChild(e);
     });
+
+    let p = document.getElementById("controls");
+    yWordOffset = p.offsetHeight + p.offsetTop;
+    //console.log("????????????", yWordOffset);
 }
 function loadWors(text, splitter) {
     clearWords();
@@ -324,52 +341,81 @@ function loadWors(text, splitter) {
 
     var wordsTemp = text.split(splitter);
     for (var k = 0; k+1 < wordsTemp.length; k+=2) {
-	words.push([wordsTemp[k].trim(), wordsTemp[k+1].trim()]);
+        let eId = k/2 + 1;
+        words.push({ en: wordsTemp[k].trim(), ru : wordsTemp[k+1].trim(), id : eId});
     }
-    var i = 0;
-    words.some(function(e, idx, a) {
-        i++;
-
-        return !addWord(e[0], e[1], i, wordDivs, wordsid, other);
-    });
+    
+    if (words.length > 0) addWord(words[0], wordDivs, wordsid, other, words, 1);
 }
-function addWord(e0, e1, i, wordDivs, wordsid, other) {
-        var cnt = true;
-	wordsid.push({ id: i, en: e0, ru: e1 });
-        if (other && i in wordrate && wordrate[i] > 5) {
-            other.push({ id: i, en: e0, ru: e1 });
-            return cnt;
+function addWord(e, wordDivs, wordsid, other, arr, idx) {
+// TODO on end loading
+    if (other && e.id in wordrate && wordrate[e.id] > 5) {
+        other.push(e);
+    } else {
+        wordsid.push(e);
+        if (!other && wordsid.length >= 10) {
+            for(; idx < arr.length; idx++) {
+                wordsid.push(arr[idx]);
+            }
+            return;
         }
-
-            var ew = printWord(e0, i, "en", "red");
-            var rw = printWord(e1, i, "ru", "blue");
-            var j = 1;
-            var isover = hasOverlap(wordDivs, ew);
-            while(isover && j < 100) {
-                moveDiv(ew);
-                isover = hasOverlap(wordDivs, ew);
-                j=j+1;
-            }
-            if (j >= 100) cnt = false;
-            wordDivs.push(ew);
-            j = 1;
-            isover = hasOverlap(wordDivs, rw);
-            while(isover && j < 100) {
-                moveDiv(rw);
+        var ew = document.createElement("div");
+        var rw = document.createElement("div");
+        
+        printWord(ew, e.en, e.id, "en", "red", function() {
+            printWord(rw, e.ru, e.id, "ru", "blue", function() {
+                let cnt = true;
+                var j = 1;
+                var isover = hasOverlap(wordDivs, ew);
+                while(isover && j < 100) {
+                    moveDiv(ew);
+                    isover = hasOverlap(wordDivs, ew);
+                    j=j+1;
+                }
+                if (j >= 100) cnt = false;
+                wordDivs.push(ew);
+                j = 1;
                 isover = hasOverlap(wordDivs, rw);
-                j=j+1;
-            }
-            if (j >= 100) cnt = false;
-            wordDivs.push(rw);
-    return cnt;
+                while(isover && j < 100) {
+                    moveDiv(rw);
+                    isover = hasOverlap(wordDivs, rw);
+                    j=j+1;
+                }
+                if (j >= 100) cnt = false;
+                wordDivs.push(rw);
+                if (cnt && idx < arr.length) {
+                    addWord(arr[idx], wordDivs, wordsid, other, arr, idx+1);
+                } else {
+                    if (other) {
+                        if (wordsid.length < 10 && other.length > 0) {
+                            shuffle(other);
+                            addWord(other[0], wordDivs, wordsid, null, other, 1);
+                        } else {
+                            other.forEach(function(el) {
+                                wordsid.push(el);
+                            });
+                        }
+                    }
+                }
+            });
+        });
+    }    
 }
 
+function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+}
 </script>
 
+<div id="controls">
 <input type="file" id="files" name="files[]" />
-User: <input type="text" id="uname" name="uname" />
-Theme: <input type="text" id="theme" name="theme" />
+<div class="inline">User: <input type="text" id="uname" name="uname" /></div>
+<div class="inline">Theme: <input type="text" id="theme" name="theme" /></div>
 <input type="button" onclick="saveSettings()" value="Save"/>
+</id>
 
 <script>
     function handleFileSelect(evt) {
