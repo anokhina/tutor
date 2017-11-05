@@ -1,0 +1,1 @@
+img:noty/do_sup_3.png,до<sup>3</sup> ,img:noty/re_sup_3.png,ре<sup>3</sup> ,img:noty/mi_sup_3.png,ми<sup>3</sup> ,img:noty/fa_sup_3.png,фа<sup>3</sup> ,img:noty/sol_sup_3.png,соль<sup>3</sup> ,img:noty/la_sup_3.png,ля<sup>3</sup> ,img:noty/si_sup_3.png,си<sup>3</sup> 

@@ -1,0 +1,1 @@
+img:noty/do.png,до ,img:noty/re.png,ре ,img:noty/mi.png,ми ,img:noty/fa.png,фа ,img:noty/sol.png,соль ,img:noty/la.png,ля ,img:noty/si.png,си 
