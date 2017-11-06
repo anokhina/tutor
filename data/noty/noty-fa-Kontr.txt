@@ -1,0 +1,1 @@
+img:noty/fa-Do_sub_1.png,До<sub>1</sub> ,img:noty/fa-Re_sub_1.png,Ре<sub>1</sub> ,img:noty/fa-Mi_sub_1.png,Ми<sub>1</sub> ,img:noty/fa-Fa_sub_1.png,Фа<sub>1</sub> ,img:noty/fa-Sol_sub_1.png,Соль<sub>1</sub> ,img:noty/fa-La_sub_1.png,Ля<sub>1</sub> ,img:noty/fa-Si_sub_1.png,Си<sub>1</sub> 

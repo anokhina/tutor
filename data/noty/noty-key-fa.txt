@@ -1,0 +1,1 @@
+img:noty/key-fa-do.png,до ,img:noty/key-fa-re.png,ре ,img:noty/key-fa-mi.png,ми ,img:noty/key-fa-fa.png,фа ,img:noty/key-fa-sol.png,соль ,img:noty/key-fa-la.png,ля ,img:noty/key-fa-si.png,си 
