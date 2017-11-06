@@ -3,6 +3,9 @@
 <meta charset="UTF-8">
 
   <style type="text/css">
+ .control, .control input {
+     font-size: large
+ }
 .lastClicked { 
     color: green !important;
     border: 3px solid green !important;
@@ -142,6 +145,7 @@ function wordClicked(p) {
     p.classList.add("lastClicked");
     setTimeout(function(){
         if (lastClicked) {
+//////        
             lastClicked.obj.classList.remove("lastClicked");
             var lc = lastClicked.obj;
             let w1id = p.id.substring(p.lang.length);
@@ -153,10 +157,11 @@ function wordClicked(p) {
                 if (lccnt > 2) {
                     var showwords = document.querySelectorAll(".id" + w2id);
                     showwords.forEach(function(e){
-                e.classList.add("showword");
+                        e.classList.add("showword");
                     });
                     setTimeout(function(){
                         showwords.forEach(function(e){
+//////        
                             e.classList.remove("showword");
                 });
                     }, 3000);
@@ -225,6 +230,7 @@ function wordClicked(p) {
                     p.setAttribute("title", "" + wordrate[w1id]);
                     lc.setAttribute("title", "" + wordrate[w2id]);
                 }
+//////        
                 p.classList.remove("lastClicked");
             } else {
                 lastClicked = {obj : p, cnt : 1};
@@ -317,7 +323,8 @@ function moveDiv(element, pnt) {
 }
 
 function startGame() {
-    var text = "red,красный,plum,сливовый,img:zzz1.png,тест";
+    var text = "red,красный,plum,сливовый,img:zzz1.png,тест<sup>x</sup><sub>y</sub>";
+    text = "<delimeter>|</delimeter>red|красный|plum|сливовый|img:zzz1.png|тест<sup>x</sup><sub>y</sub>";
     //text = "A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет";
     loadWors(text, ",");
 }
@@ -333,6 +340,12 @@ function clearWords() {
     //console.log("????????????", yWordOffset);
 }
 function loadWors(text, splitter) {
+    let sidx1 = text.indexOf("<delimeter>");
+    let sidx2 = text.indexOf("</delimeter>");
+    if (sidx1>=0 && sidx2>=0 && sidx1<sidx2) {
+        splitter=text.substring(sidx1 + "<delimeter>".length, sidx2);
+        text=text.substring(sidx2+"</delimeter>".length);
+    }
     clearWords();
 
     var wordDivs = [];
@@ -410,10 +423,10 @@ function shuffle(a) {
 }
 </script>
 
-<div id="controls">
+<div id="controls" class="control">
 <input type="file" id="files" name="files[]" />
-<div class="inline">User: <input type="text" id="uname" name="uname" /></div>
-<div class="inline">Theme: <input type="text" id="theme" name="theme" /></div>
+<div class="inline">User: <input type="text" id="uname" name="uname" size="10"/></div>
+<div class="inline">Theme: <input type="text" id="theme" name="theme" size="12" /></div>
 <input type="button" onclick="saveSettings()" value="Save"/>
 </id>
 
