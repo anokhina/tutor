@@ -1,0 +1,16 @@
+Who is that man?, Кто тот человек?, 
+Whom do you see?, Кого ты видишь?, 
+Whose is this bag?, Чья это сумка?, 
+What is it?, Что это?, 
+What books do you like to read?, Какие книги ты любишь читать?, 
+Which book is yours?, Которая из книг твоя?, 
+Where are my glasses?, Где мои очки?, 
+When will he arrive?, Когда он приедет?,
+Why are you so sad?, Почему ты такой грустный?,
+How does it work?, Как это работает?,
+How often do you work?, Как часто ты работаешь?,
+How much money have you got?, Сколько денег у тебя?,
+How many dollars have you got?, Сколько долларов у тебя?,
+How long does it take to fly from Moscow to New York?, Сколько времени лететь из Москвы в Нью-Йорк?
+How long ago did you leave kindergarten?, Как давно ты закончил детский сад?,
+How old are you?, Сколько тебе лет?
