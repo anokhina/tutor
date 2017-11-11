@@ -59,9 +59,8 @@ function nextWord() {
             arr[0].setAttribute("id", words2show[words2showIdx].id);
             arr[0].innerHTML = words2show[words2showIdx].name;
         } else {
-            let idx = Math.floor(Math.random() * praise.length);
             arr[0].setAttribute("id", 0);
-            arr[0].innerHTML = praise[idx];
+            arr[0].innerHTML = praise[Math.floor(Math.random() * praise.length)];
             
             words2showIdx = -1;
             startGame(false);
