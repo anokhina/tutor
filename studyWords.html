@@ -28,6 +28,9 @@
     display: inline-block;
     padding: 2px;
 }
+.hide {
+    display: none;
+}
   </style>
 
 <body class="noselect">
@@ -50,6 +53,8 @@ var lastClicked = null;
 var wordrate = {};
 var wordsid = [];
 var idPrefixLength = 3;
+var currentSettings = null;
+var startAgain = false;
 
 function saveAs(data, filename) {
     var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
@@ -65,12 +70,7 @@ function saveAs(data, filename) {
     }
 }
 
-function saveSettings() {
-    var uname = document.getElementById('uname').value;
-    if (! (uname && uname.trim().length > 0)) {
-        alert("No user name");
-        return;
-    }
+function makeSettings() {
     var settings = { words : [], wordrate : {} };
     var uname = document.getElementById('uname').value;
     if (uname) {
@@ -83,6 +83,16 @@ function saveSettings() {
 
     settings.words = wordsid;
     settings.wordrate = wordrate;
+    return settings;
+}
+function saveSettings() {
+    var uname = document.getElementById('uname').value;
+    if (! (uname && uname.trim().length > 0)) {
+        alert("No user name");
+        return;
+    }
+    var settings = makeSettings();
+    
     var text = JSON.stringify( settings );
     var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
     var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
@@ -93,6 +103,8 @@ function saveSettings() {
 }
 
 function loadSettings(cfg) { 
+    startAgain = false;
+    hidePrise();
 
     if ("words" in cfg) {
         clearWords();
@@ -211,19 +223,15 @@ function wordClicked(p) {
                             document.body.removeChild(r);
                         });
                         if (findVariant && document.querySelectorAll(".lword").length <= 0) {
-                            var startAgain = false;
                             for (k in wordrate) {
                                 if (wordrate[k] <= 5) {
                                     startAgain = true;
+                                    showPrise();
                                     break;
                                 }
                             }
                             var cfg = saveSettings();
-                            if (startAgain) {
-                                loadSettings(cfg);
-                            } else {
-                                alert("THE END");
-                            }
+                            currentSettings = cfg;
                         }
                     }, 500);
                     lastClicked = nextLastClicked;
@@ -272,6 +280,31 @@ function getIdPrefix(prefix) {
         return "p" + prefix;
     }
     return "prr";
+}
+var praise = [ "&#9973;", "&#9951;", "&#9924;", "&#9972;", "&#x263a;", "&#x2708;", "&#x2655;", "&#x1F600;", "&#x1F602;", "&#x1F60A;", "&#x1F60D;", "&#x1F638;", "&#x1F639;", "&#x1F63A;", "&#x1F63B;", "&#x1F64B;", "&#x1F64C;"];
+function hidePrise() {
+    let p = document.getElementById("prise");
+    if (p) {
+        p.classList.add("hide");
+    }
+}
+function showPrise() {
+    var element = document.getElementById("prise");
+    if (element) {
+        element.classList.remove("hide");
+        element.innerHTML = praise[Math.floor(Math.random() * praise.length)];
+    } else {
+        element = document.createElement("div");
+        element.setAttribute("id", "prise");
+        element.style.position = "absolute";
+        element.style.fontWeight = "900";
+        element.style.fontSize = "xx-large";
+        element.innerHTML = praise[Math.floor(Math.random() * praise.length)];
+        document.body.appendChild(element);
+    }
+    var rect = getRect(element);
+    element.style.left = "" + Math.floor((window.innerWidth - rect.w)/2) + "px";
+    element.style.top = "" + Math.floor((window.innerHeight - rect.h)/2) + "px";
 }
 function printWord(prefix, element, w, wid, lng, col, callback) {
     var isPicture = w.startsWith("img:");
@@ -352,12 +385,20 @@ function moveDiv(element, pnt) {
     }
 }
 
-function startGame() {
-    var text = "red,крАсный,красноватый|plum,сливовый|img:zzz1.png,тест<sup>x</sup><sub>y</sub>";
-    text="4,2x2|9,3x3|16,4x4,2x8,8x2|25,5x5|36,6x6,9x4,4x9|49,7x7|64,8x8|81,9x9|6,2x3,3x2|8,4x2,2x4|10,5x2,2x5|12,6x2,2x6,3x4,4x3|18,2x9,9x2,6x3,3x6|15,3x5,5x3";
-    //text = "<delimeter>|</delimeter>red|красный|plum|сливовый|img:zzz1.png|тест<sup>x</sup><sub>y</sub>";
-    //text = "A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет";
-    loadWors(text, ",");
+function startGame(startCurrent) {
+    if (startCurrent) {
+        if (startAgain) {
+            loadSettings(currentSettings);
+        } else {
+            alert("THE END");
+        }
+    } else {
+        var text = "red,крАсный,красноватый|plum,сливовый|img:zzz1.png,тест<sup>x</sup><sub>y</sub>";
+        //text="4,2x2|9,3x3|16,4x4,2x8,8x2|25,5x5|36,6x6,9x4,4x9|49,7x7|64,8x8|81,9x9|6,2x3,3x2|8,4x2,2x4|10,5x2,2x5|12,6x2,2x6,3x4,4x3|18,2x9,9x2,6x3,3x6|15,3x5,5x3";
+        //text = "<delimeter>|</delimeter>red|красный|plum|сливовый|img:zzz1.png|тест<sup>x</sup><sub>y</sub>";
+        //text = "A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет";
+        loadWors(text, ",");
+    }
 }
 function clearWords() {
     wordsid = [];
@@ -372,6 +413,8 @@ function clearWords() {
 }
 function loadWors(text, splitter) {
 // <lang1></lang2><lang2></lang2>
+    startAgain = false;
+    hidePrise();
     let otherDelimeter = false;
     let sidx1 = text.indexOf("<delimeter>");
     let sidx2 = text.indexOf("</delimeter>");
@@ -411,9 +454,11 @@ function loadWors(text, splitter) {
         });
     }
     
-    if (words.length > 0) addWord(words[0], wordDivs, wordsid, other, words, 1);
+    if (words.length > 0) addWord(words[0], wordDivs, wordsid, other, words, 1, function(){
+        currentSettings = makeSettings();
+    });
 }
-function addWord(e, wordDivs, wordsid, other, arr, idx) {
+function addWord(e, wordDivs, wordsid, other, arr, idx, callback) {
 // TODO on end loading
     if (other && e.id in wordrate && wordrate[e.id] > 5) {
         other.push(e);
@@ -461,16 +506,23 @@ function addWord(e, wordDivs, wordsid, other, arr, idx) {
             
             if (cnt) {
                 if (idx < arr.length) {
-                    addWord(arr[idx], wordDivs, wordsid, other, arr, idx+1);
+                    addWord(arr[idx], wordDivs, wordsid, other, arr, idx+1, callback);
                 } else {
                     if (other) {
                         if (wordsid.length < 10 && other.length > 0) {
                             shuffle(other);
-                            addWord(other[0], wordDivs, wordsid, null, other, 1);
+                            addWord(other[0], wordDivs, wordsid, null, other, 1, callback);
                         } else {
                             other.forEach(function(el) {
                                 wordsid.push(el);
                             });
+                            if (callback) {
+                                callback();
+                            }
+                        }
+                    } else {
+                        if (callback) {
+                            callback();
                         }
                     }
                 }
@@ -479,6 +531,9 @@ function addWord(e, wordDivs, wordsid, other, arr, idx) {
                     other.forEach(function(el) {
                         wordsid.push(el);
                     });
+                }
+                if (callback) {
+                    callback();
                 }
             }
         };
@@ -529,6 +584,7 @@ function shuffle(a) {
 <div class="inline">User: <input type="text" id="uname" name="uname" size="10"/></div>
 <div class="inline">Theme: <input type="text" id="theme" name="theme" size="12" /></div>
 <input type="button" onclick="saveSettings()" value="Save"/>
+<input type="button" onclick="startGame(true)" value="Start"/>
 </id>
 
 <script>
