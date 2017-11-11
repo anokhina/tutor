@@ -15,6 +15,10 @@ html, body {
     -ms-user-select: none;
     user-select: none;
 }
+.inline {
+    display: inline-block;
+    padding-top: 2px;
+}
   </style>
 
 <body class="noselect">
@@ -40,22 +44,27 @@ function incrementCounter(wordid, incr) {
     //TODO in array
     incrWordCnt(db, personid, wordid, incr/*, callback, callbackError*/);
 }
+var praise = [ "&#9973;", "&#9951;", "&#9924;", "&#9972;", "&#x263a;", "&#x2708;", "&#x2655;", "&#x1F600;", "&#x1F602;", "&#x1F60A;", "&#x1F60D;", "&#x1F638;", "&#x1F639;", "&#x1F63A;", "&#x1F63B;", "&#x1F64B;", "&#x1F64C;"];
 function nextWord() {
     let cell = tableWordCell;
     let arr = cell.getElementsByClassName("lword");
     if (arr.length > 0) {
         words2showIdx += 1;
+        document.getElementById('idxWord').value = words2showIdx;
+
         if (arr[0].id != "0") {
             incrementCounter(arr[0].id, 1);
         }
         if (words2showIdx < words2show.length) {
             arr[0].setAttribute("id", words2show[words2showIdx].id);
-            arr[0].innerText = words2show[words2showIdx].name;
+            arr[0].innerHTML = words2show[words2showIdx].name;
         } else {
+            let idx = Math.floor(Math.random() * praise.length);
             arr[0].setAttribute("id", 0);
-            arr[0].innerText = "";
+            arr[0].innerHTML = praise[idx];
+            
             words2showIdx = -1;
-            startGame();
+            startGame(false);
         }
     }
 }
@@ -101,11 +110,13 @@ function printWord(parentObj, w, wid, col) {
 }
 
 /////////////////////////////////
-function gotWords(arr) {
+function gotWords(arr, andStart) {
     words2show = arr;
     if (arr.length > 0) {
         words2showIdx = -1;
-        nextWord();
+        if (andStart) {
+            nextWord();
+        }
     }
 }
 function fillTable(word) {
@@ -140,8 +151,12 @@ Language:
   <option value="ru-Ru">Russian</option>
   <option value="en-UK">English</option>
 </select>
-User: <input type="text" id="uname" name="uname" />
-<input type="button" onclick="startGame()" value="Start"/>
+<div class="inline">User: <input type="text" id="uname" name="uname" /></div>
+<div class="inline">Min word length: <input type="text" id="minlen" name="minlen" value="3" type="number" size="4" min="3" maxlength="2" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+<div class="inline">Max word len:<input type="text" id="maxWordLen" name="maxWordLen" readonly="readonly" size="4"/></div>
+<div class="inline">Current word number:<input type="text" id="idxWord" name="idxWord" readonly="readonly" size="4"/></div>
+<div class="inline">Words to show:<input type="text" id="numWord" name="numWord" value="25" type="number" size="4" min="5" maxlength="2" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+<input type="button" onclick="startGame(true)" value="Start"/>
 <input type="button" onclick="nextWord()" value="NEXT>>>"/>
 </div>
 <table id="wordTable" border="1" width="99%" style="margin-top: .5em;" >
@@ -255,13 +270,29 @@ function showTable(db, table) {
         );
     });
 }
-function takeWords(db, userid, maxcnt, limit, callback) {
+function showMaxLen(db, callback) {
+    db.transaction(function (tx) {
+        tx.executeSql('SELECT MAX(LENGTH(words.name)) as wlen FROM words', [], 
+            function (tx, results) {
+                var len = results.rows.length;
+        
+                for (let i = 0; i < len; i++) {
+                    callback(results.rows.item(i).wlen);
+                }
+            },
+            function(err) { 
+                console.log(err);
+            }
+        );
+    });
+}
+function takeWords(db, userid, maxcnt, minlen, limit, andStart, callback) {
     db.transaction(function (tx) {
         tx.executeSql(
-" SELECT words.id, words.name, LENGTH(words.name) as wlen, personwords.cnt FROM words,  personwords WHERE personwords.cnt < ? AND words.id=personwords.wordid AND personwords.personid = ? UNION ALL " +
-" SELECT words.id, words.name, LENGTH(words.name) as wlen, 0 FROM words WHERE NOT EXISTS (SELECT * FROM personwords WHERE words.id=personwords.wordid AND personwords.personid = ? ) ORDER BY cnt DESC, wlen ASC, name ASC LIMIT ?"
+" SELECT words.id, words.name, LENGTH(words.name) as wlen, personwords.cnt FROM words,  personwords WHERE personwords.cnt < ? AND words.id=personwords.wordid AND personwords.personid = ? AND wlen > ? UNION ALL " +
+" SELECT words.id, words.name, LENGTH(words.name) as wlen, 0 FROM words WHERE wlen > ? AND NOT EXISTS (SELECT * FROM personwords WHERE words.id=personwords.wordid AND personwords.personid = ? ) ORDER BY cnt DESC, wlen ASC, name ASC LIMIT ?"
             , 
-            [maxcnt, userid, userid, limit], 
+            [maxcnt, userid, minlen, minlen, userid, limit], 
             function (tx, results) {
                 var len = results.rows.length;
                 //let msg = "<p>Found rows: " + len + "</p>";
@@ -274,7 +305,7 @@ function takeWords(db, userid, maxcnt, limit, callback) {
                     arr.push(results.rows.item(i));
                 }
                 if (isFunction(callback)) {
-                    callback(arr);
+                    callback(arr, andStart);
                 }
             },
             function(err) { 
@@ -451,7 +482,7 @@ function handleTouchMove(evt) {
     touchStartX = null;
     touchStartY = null;                                             
 };
-function startGame() {
+function startGame(andStart) {
     var uname = document.getElementById('uname').value;
     if (! (uname && uname.trim().length > 0)) {
         alert("No user name");
@@ -465,7 +496,7 @@ function startGame() {
                         findByName(db,"persons", uname, function(results) {
                             if (results.rows.length > 0) {
                                 personid = results.rows.item(0).id;
-                                startGame4Person();
+                                startGame4Person(andStart);
                             }
                         });
                     }, 
@@ -475,7 +506,7 @@ function startGame() {
                 );
             } else {
                 personid = results.rows.item(0).id;
-                startGame4Person();
+                startGame4Person(andStart);
             }
         }, 
         function(err){
@@ -483,8 +514,25 @@ function startGame() {
         }
     );
 }
-function startGame4Person() {
-    takeWords(db, personid, 6, 25, gotWords);
+function readIntValue(id, minVal) {
+    var minlen;
+    if (minVal) {
+        minlen = minVal;
+    } else {
+        minlen = 0;
+    }
+    try {
+        minlen = parseInt(document.getElementById('minlen').value);
+    } catch (e) {
+        console.log(e);
+    }
+    if (minVal && minlen < minVal) {
+        minlen = minVal;
+    }
+    return minlen;
+}
+function startGame4Person(andStart) {
+    takeWords(db, personid, 6, readIntValue('minlen', 3) - 1, readIntValue('numWord', 5), andStart, gotWords);
 }
 /*
 addUser(db, "test");
@@ -502,6 +550,9 @@ addWordCnt(db, 1, 1, 2);
 //setWordCnt(db, 1, 2, 4);
 
 showTable(db, "personwords");
+showMaxLen(db, function(v) {
+    document.getElementById('maxWordLen').value = v;
+});
 //addWords(db, toWords("two-way some text,with;words. and -- long"));
 //addWords(db, toWords("SOME OTHER"));
 //showTable(db, "words");
