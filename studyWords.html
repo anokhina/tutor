@@ -79,6 +79,8 @@ function makeSettings() {
     var theme = document.getElementById('theme').value;
     if (theme) {
         settings.theme = theme.trim();
+    } else {
+        settings.theme = "";
     }
 
     settings.words = wordsid;
@@ -96,7 +98,7 @@ function saveSettings() {
     var text = JSON.stringify( settings );
     var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
     var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
-    var filenameUname = "-" + uname + "-" + theme + "-";
+    var filenameUname = "-" + uname + "-" + settings.theme + "-";
     //var filenameUname = uname.replace(/[^a-zA-Z0-9_-а-яА-Я]/gi, '_').toLowerCase();
     saveAs(blob, "configData"+filenameUname+todayDate+".json");
     return settings;
