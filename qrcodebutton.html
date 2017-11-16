@@ -39,9 +39,9 @@ URL: <br><center><textarea rows="5" id="uname" name="uname" ></textarea></center
 </center>
 <script type="text/javascript">
 
-var wh = Math.min(window.innerWidth, window.innerHeight) - 100;
-wh = Math.min(wh, 250);
-
+var wh = Math.min(window.innerWidth, window.innerHeight) - 20;
+wh = Math.min(wh, 300);
+document.getElementById("uname").value = wh;
 var qrcode = new QRCode(document.getElementById("qrcode"), {
 	text: window.location.href,
 	width: wh,
