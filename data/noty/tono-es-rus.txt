@@ -1,0 +1,8 @@
+img:noty/es-si-mi-la-re-sol-do-fa.png, <sub class="memo">(фа соль)</sub> ЛЯ &#9837; минор, до &#9837; мажор|
+img:noty/es-si-mi-la-re-sol-do.png, <sub class="memo">(до ре)</sub> МИ &#9837; минор, соль &#9837; мажор |
+img:noty/es-si-mi-la-re-sol.png, <sub class="memo">(соль ля)</sub> СИ &#9837; минор, ре &#9837; мажор |
+img:noty/es-si-mi-la-re.png, <sub class="memo">(ре ми)</sub> ФА минор, ля &#9837; мажор |
+img:noty/es-si-mi-la.png, <sub class="memo">(ля си)</sub> ДО минор, ми &#9837; мажор |
+img:noty/es-si-mi.png, <sub class="memo">(ми фа)</sub> СОЛЬ минор, си &#9837; мажор |
+img:noty/es-si.png, <sub class="memo">(си до)</sub> РЕ минор, фа мажор |
+img:noty/key-sol.png, ЛЯ минор, до мажор

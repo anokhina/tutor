@@ -1,0 +1,8 @@
+img:noty/is-fa-do-sol-re-la-mi-si.png, ля &#9839; минор|
+img:noty/is-fa-do-sol-re-la-mi.png, ре &#9839; минор |
+img:noty/is-fa-do-sol-re-la.png, соль &#9839; минор |
+img:noty/is-fa-do-sol-re.png, до &#9839; минор |
+img:noty/is-fa-do-sol.png, фа &#9839; минор |
+img:noty/is-fa-do.png, си минор |
+img:noty/is-fa.png, ми минор |
+img:noty/key-sol.png, ля минор
