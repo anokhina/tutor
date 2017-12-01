@@ -131,6 +131,63 @@ function searchFormReset() {
     document.getElementById('fromdate').value = zeroDate.toISOString().substr(0, 10);
     document.getElementById('todate').value = futureDate.toISOString().substr(0, 10);
 }
+function exportData() {
+    showEvents(db, function(obj) {
+    console.log(obj, JSON.stringify( obj, null, 2 ));
+        var text = JSON.stringify( obj, null, 2 );
+        let obj1 = JSON.parse(text);
+        obj1.length = obj.length;
+        text = JSON.stringify( obj1, null, 2 );
+        
+        var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+        var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
+        var filenameUname = "-" + "events" + "-";
+        saveAs(blob, "exportData"+filenameUname+todayDate+".json");
+    } );
+}
+function importData(obj) {
+    console.log(obj);
+    fillTable(obj);
+}
+function saveAs(data, filename) {
+    var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
+    if (window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveBlob(blob, filename);
+    } else {
+        var elem = window.document.createElement('a');
+        elem.href = window.URL.createObjectURL(blob);
+        elem.download = filename;        
+        document.body.appendChild(elem);
+        elem.click();        
+        document.body.removeChild(elem);
+    }
+}
+function handleFileSelect(evt) {
+    if (window.File && window.FileReader && window.FileList && window.Blob) {
+
+    } else {
+        alert('The File APIs are not fully supported in this browser.');
+        return;
+    }
+
+    var files = evt.target.files;
+
+    var output = [];
+    for (var i = 0, f; f = files[i]; i++) {
+        var reader = new FileReader();
+        reader.readAsText (f);
+        reader.onload = function(e) {
+            var text = reader.result;
+            try {
+                var cfg = JSON.parse(text);
+                importData(cfg);
+            } catch (e) {
+                console.log("parse json error", e);
+                showStatus("parse json error");
+            }
+        };
+    }
+}
 </script>
 
 <div id="controls">
@@ -152,11 +209,23 @@ function searchFormReset() {
 </table>
 </form>
 
+<form id="exportForm">
+<table border=1 style="width:100%"><tr>
+<td>
+<input type="button" onclick="exportData()" value="Export"/>
+Import: <input type="file" id="files" name="files[]" />
+<button type="reset" value="Reset">Reset</button>
+</td>
+</tr>
+</table>
+</form>
+
 <form id="searchForm" onsubmit="showEvents(db); return false;">
 <table border=0 style="width:100%"><tr>
 <td>
 <input type="submit" value="Log">
 <input type="button" onclick="searchFormReset()" value="Reset"/>
+</td></tr><tr><td>
 <div class="inline">From date: <input type="date" id="fromdate" name="fromdate" /></div>
 <div class="inline">To date: <input type="date" id="todate" name="todate" /></div>
 <div>Name:</div><input type="text" id="fename" name="fename" style="width:99%"/>
@@ -174,6 +243,7 @@ function searchFormReset() {
 <script>
 newEvent();
 searchFormReset();
+document.getElementById('files').addEventListener('change', handleFileSelect, false);
 
     var db = openDatabase('sevnEvents', '1.0', 'Events db', 20 * 1024 * 1024);
 //dropTables(db, ["events"]);
@@ -234,13 +304,63 @@ function deleteEventDB(db, id) {
      });
 }
 
-function showEvents(db) {
+function fillTable(results_rows) {
+    var len = results_rows.length;
+                
+    var table = document.getElementById("eventListTable");
+    while(table.rows.length > 0) {
+        table.deleteRow(0);
+    }
+
+    //ename, ememo, id, elen, pdate, edate, dlen
+    let columnNames = {id: "", edate: "", dlen: "", ename: "", elen: "", ememo: ""};
+    let trow = 0;
+    let row;
+    for (let i = 0; i < len; i++) {
+        row = table.insertRow(trow++);
+        if (i == 0) {
+            let j = 0;
+            for (let p in columnNames) {
+                let cell = row.insertCell(j);
+                j++;
+                let element = document.createElement("div");
+                //element.setAttribute("id", wid);
+                cell.appendChild(element);
+                //TODO escape
+                element.innerHTML = escapeHTML(p);
+            }
+            row = table.insertRow(trow++);
+        }
+        let j = 0;
+        for (let p in columnNames) {
+            let cell = row.insertCell(j);
+            j++;
+            let element = document.createElement("div");
+            //element.setAttribute("id", wid);
+            cell.appendChild(element);
+            //TODO escape
+            var rowIt = rowItem(results_rows,i);
+            element.innerHTML = escapeHTML(rowIt[p]);
+            if (p == "id") {
+                cell.setAttribute("onclick", "editEvent("+JSON.stringify(rowIt)+")");
+            }
+        }
+
+        //console.log(i, results_rows.item(i));
+    }
+}
+
+function rowItem (results_rows, i) {
+    if ( "item" in results_rows ) {
+        return results_rows.item(i);
+    } else {
+        return results_rows[i];
+    }
+}
+
+function showEvents(db, callback) {
     db.transaction(function (tx) {
         //date(l/1000,'unixepoch','localtime') //sqlite ms to date
-        var table = document.getElementById("eventListTable");
-        while(table.rows.length > 0) {
-            table.deleteRow(0);
-        }
         var limit = document.getElementById('elimit').value, 
             offset = document.getElementById('eoffset').value,
             fename = document.getElementById('fename').value,
@@ -290,44 +410,10 @@ sql =
         }
         tx.executeSql(sql, sqlparam, 
             function (tx, results) {
-                var len = results.rows.length;
-                let msg = "<p>Found rows: " + len + "</p>";
-                //console.log(msg);
-        
-                //ename, ememo, id, elen, pdate, edate, dlen
-                let columnNames = {id: "", edate: "", dlen: "", ename: "", elen: "", ememo: ""};
-                let trow = 0;
-                let row;
-                for (let i = 0; i < len; i++) {
-                    row = table.insertRow(trow++);
-                    if (i == 0) {
-                        let j = 0;
-                        for (let p in columnNames) {
-                            let cell = row.insertCell(j);
-                            j++;
-                            let element = document.createElement("div");
-                            //element.setAttribute("id", wid);
-                            cell.appendChild(element);
-                            //TODO escape
-                            element.innerHTML = escapeHTML(p);
-                        }
-                        row = table.insertRow(trow++);
-                    }
-                    let j = 0;
-                    for (let p in columnNames) {
-                        let cell = row.insertCell(j);
-                        j++;
-                        let element = document.createElement("div");
-                        //element.setAttribute("id", wid);
-                        cell.appendChild(element);
-                        //TODO escape
-                        element.innerHTML = escapeHTML(results.rows.item(i)[p]);
-                        if (p == "id") {
-                            cell.setAttribute("onclick", "editEvent("+JSON.stringify(results.rows.item(i))+")");
-                        }
-                    }
-    
-                    //console.log(i, results.rows.item(i));
+                if (callback) {
+                    callback(results.rows);
+                } else {
+                    fillTable(results.rows)
                 }
             },
             function(err) { 
