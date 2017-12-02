@@ -1,4 +1,19 @@
 <!DOCTYPE html>
+<!--
+Copyright 2017 Veronica Anokhina.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 <html>
 <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,6 +32,14 @@ html, body {
 <body>
 
 <script>
+function toObject(arr) {
+    var ret = {};
+    for (let i = 0; i < arr.length; ++i) {
+        ret[i] = arr[i];
+    }
+    ret.length = arr.length;
+    return ret;
+}
 var __escape = document.createElement('textarea');
 function escapeHTML(html) {
     __escape.textContent = html;
@@ -27,6 +50,10 @@ function unescapeHTML(html) {
     __escape.innerHTML = html;
     return __escape.textContent;
 }
+function generateGuid() {
+    return Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15);
+}    
 function dropTables(db, names) {
     db.transaction(
         function(transaction) {
@@ -96,7 +123,7 @@ function delEvent() {
         edate = new Date(edate).toISOString().substr(0, 10);
     }
     
-    if (eid && confirm("Delete [" + eid + "] " + ename) == true) {
+    if (confirm("Delete [" + eid + "] " + ename) == true) {
         deleteEventDB(db, eid);
         showEvents(db);
     }    
@@ -131,23 +158,31 @@ function searchFormReset() {
     document.getElementById('fromdate').value = zeroDate.toISOString().substr(0, 10);
     document.getElementById('todate').value = futureDate.toISOString().substr(0, 10);
 }
-function exportData() {
-    showEvents(db, function(obj) {
+function saveObj2FS(obj, filePrefix) {
     console.log(obj, JSON.stringify( obj, null, 2 ));
-        var text = JSON.stringify( obj, null, 2 );
-        let obj1 = JSON.parse(text);
-        obj1.length = obj.length;
-        text = JSON.stringify( obj1, null, 2 );
-        
-        var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
-        var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
-        var filenameUname = "-" + "events" + "-";
-        saveAs(blob, "exportData"+filenameUname+todayDate+".json");
-    } );
+    var text = JSON.stringify( obj, null, 2 );
+    let obj1 = JSON.parse(text);
+    obj1.length = obj.length;
+    text = JSON.stringify( obj1, null, 2 );
+    
+    var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+    var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
+    var filenameUname = "-" + "events" + "-";
+    if (filePrefix) {
+    } else {
+        filePrefix = "exportData";
+    }
+    saveAs(blob, filePrefix+filenameUname+todayDate+".json");
+}
+function exportData() {
+    showEvents(db, saveObj2FS );
 }
 function importData(obj) {
     console.log(obj);
-    fillTable(obj);
+    //fillTable(obj);
+    if (confirm("Will import data from file? All data to be overwritten") == true) {
+        importTable(obj, 0, []);
+    }
 }
 function saveAs(data, filename) {
     var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
@@ -195,7 +230,9 @@ function handleFileSelect(evt) {
 <table border=0 style="width:100%"><tr>
 <td>&nbsp;<div id="opstatus" class="inline">Ok</div>
 </td></tr><tr><td>
-<input type="text" readonly="true" id="eid" name="eid" value="1" type="number" size="4" min="0" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+<input type="text" readonly="true" id="eidprefix" name="eidprefix"/>
+</td></tr><tr><td>
+<input type="text" readonly="true" id="eid" name="eid"/>
 <div class="inline">Date: <input type="date" id="edate" name="edate" /></div>
 <div class="inline">Length: <input type="text" id="elen" name="elen" value="1" type="number" size="4" min="0" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
 <div>Name:</div><input type="text" id="ename" name="ename" style="width:99%"/>
@@ -245,25 +282,34 @@ newEvent();
 searchFormReset();
 document.getElementById('files').addEventListener('change', handleFileSelect, false);
 
+    var __idprefix = null;
     var db = openDatabase('sevnEvents', '1.0', 'Events db', 20 * 1024 * 1024);
-//dropTables(db, ["events"]);
+//dropTables(db, ["events", "idprefix"]);
 //dropViews(db, ["v_events"]);    
     db.transaction(
     //SELECT ROWID, * FROM events ORDER BY edate DESC, ename ASC
         function(transaction) {
             transaction.executeSql(
                 'CREATE TABLE IF NOT EXISTS events ' +
-                '  (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ' +
+                '  (id TEXT NOT NULL PRIMARY KEY, ' +
                 '   edate DATE NOT NULL,'  +
                 '   elen INTEGER NOT NULL,'  +
                 '   ename TEXT NOT NULL,' +
                 '   ememo TEXT);'
             );
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS idprefix ' +
+                '  (id INTEGER NOT NULL PRIMARY KEY, ' +
+                '   name TEXT);'
+            );
         }
-    );    
+    );
+    getPrefix(db);
+    
 function addEventDB(db, edate, ename, ememo, elen) {
-     db.transaction(function (tx) {
-        tx.executeSql('INSERT INTO events (edate, ename, ememo, elen) VALUES (?,?,?,?)', [ edate, ename, ememo, elen], 
+    var id = __idprefix + "-" + generateGuid();
+    db.transaction(function (tx) {
+        tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen) VALUES (?,?,?,?,?)', [id, edate, ename, ememo, elen], 
             function(transaction, results){ 
                 showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
                 //console.log(results); 
@@ -273,18 +319,39 @@ function addEventDB(db, edate, ename, ememo, elen) {
                 //console.log(err);
             }
         );
-     });
+    });
 }
-function saveEventDB(db, id, edate, ename, ememo, elen) {
+function replaceEventDB(db, id, edate, ename, ememo, elen, errLines, callback) {
+    db.transaction(function (tx) {
+        tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen) VALUES (?,?,?,?,?)', [id, edate, ename, ememo, elen], 
+            function(transaction, results){ 
+                showStatus("Inserted or updated: " + results.rowsAffected + " rows,  id=" + results.insertId);
+                //console.log(results); 
+                if (callback) callback();
+            }, 
+            function(err) { 
+                showStatus("Error");
+                console.log(err);
+                saveEventDB(db, id, edate, ename, ememo, elen, errLines, callback);
+            }
+        );
+    });
+}
+function saveEventDB(db, id, edate, ename, ememo, elen, errLines, callback) {
      db.transaction(function (tx) {
         tx.executeSql('UPDATE events SET edate = ?, ename = ?, ememo = ?, elen = ? WHERE id = ? ', [ edate, ename, ememo, elen, id], 
             function(transaction, results){ 
                 showStatus("Updated: " + results.rowsAffected);
                 //console.log(results); 
+                if (callback) callback();
             }, 
             function(err) { 
                 showStatus("Error");
+                if (errLines) {
+                    errLines.push({id: id, edate: edate, ename: ename, ememo: ememo, elen: elen, errLines: errLines});
+                }
                 //console.log(err);
+                if (callback) callback();
             }
         );
      });
@@ -304,6 +371,19 @@ function deleteEventDB(db, id) {
      });
 }
 
+function importTable(results_rows, i, errLines) {
+    //ename, ememo, id, elen, pdate, edate, dlen
+    if (i < results_rows.length) {
+        var rowIt = rowItem(results_rows,i);
+        replaceEventDB(db, rowIt["id"], rowIt["edate"], rowIt["ename"], rowIt["ememo"], rowIt["elen"], errLines, function() {
+            importTable(results_rows, i+1, errLines)
+        });
+    } else {
+        if (errLines && errLines.length > 0) {
+            saveObj2FS(toObject(errLines), "importError");
+        }
+    }
+}
 function fillTable(results_rows) {
     var len = results_rows.length;
                 
@@ -434,6 +514,40 @@ function showTable(db, table) {
                 for (let i = 0; i < len; i++) {
                     console.log(i, results.rows.item(i));
                 }
+            },
+            function(err) { 
+                console.log(err);
+            }
+        );
+    });
+}    
+function getPrefix(db) {
+    db.transaction(function (tx) {
+        tx.executeSql('SELECT name FROM idprefix WHERE id = 1', [], 
+            function (tx, results) {
+                var len = results.rows.length;
+                if (len > 0) {
+                    for (let i = 0; i < len; i++) {
+                        __idprefix = results.rows.item(i)["name"];
+                    }
+                } else {
+                    
+                    while (__idprefix == null || __idprefix == "") {
+                        __idprefix = prompt("Please enter device id", generateGuid());
+                    }
+                    
+                    tx.executeSql('INSERT INTO idprefix (id, name) VALUES (?,?)', [1, __idprefix], 
+                        function(transaction, results){ 
+                            //showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
+                            console.log(results); 
+                        }, 
+                        function(err) { 
+                            //showStatus("Error");
+                            console.log(err);
+                        }
+                    );                
+                }
+                document.getElementById('eidprefix').value = __idprefix;
             },
             function(err) { 
                 console.log(err);
