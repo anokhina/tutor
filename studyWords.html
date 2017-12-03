@@ -1,10 +1,26 @@
 <!DOCTYPE html>
+<!--
+Copyright 2017 Veronica Anokhina.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 <html>
 <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style type="text/css">
  .control, .control input {
-     font-size: large
+     font-size: small;
  }
 .lastClicked { 
     color: green !important;
@@ -30,6 +46,15 @@
 }
 .hide {
     display: none;
+}
+.memo {
+    color:gray;
+    vertical-align: baseline;
+}
+.memo:after {
+    content: "\A";
+    margin-right: 6px;
+    white-space: pre;
 }
   </style>
 
@@ -187,6 +212,7 @@ function wordClicked(p) {
                     } else {
                         wordrate[w1id] = -1;
                     }
+                    countRates();
                 }
 
                 if (!sayIt && utterance[p.lang]) {
@@ -228,10 +254,9 @@ function wordClicked(p) {
                             for (k in wordrate) {
                                 if (wordrate[k] <= 5) {
                                     startAgain = true;
-                                    showPrise();
-                                    break;
                                 }
                             }
+                            showPrise();
                             var cfg = saveSettings();
                             currentSettings = cfg;
                         }
@@ -244,6 +269,7 @@ function wordClicked(p) {
                     } else {
                         wordrate[w1id] = 1;
                     }
+                    countRates();
                 } else {
                     lastClicked = null;
                     if (w1id in wordrate) {
@@ -258,6 +284,7 @@ function wordClicked(p) {
                     } else {
                         wordrate[w2id] = -1;
                     }
+                    countRates();
                     p.setAttribute("title", "" + wordrate[w1id]);
                     lc.setAttribute("title", "" + wordrate[w2id]);
                 }
@@ -327,7 +354,11 @@ function printWord(prefix, element, w, wid, lng, col, callback) {
     element.style.position = "absolute";
     moveDiv(element);
     element.style.fontWeight = "900";
-    element.style.fontSize = "xx-large";
+    if (window.innerWidth < 481 || window.innerHeight < 481) {
+        element.style.fontSize = "small";
+    } else {
+        element.style.fontSize = "xx-large";
+    }
     element.style.border = '1px solid #cfcfc6';
     element.classList.add("lword");
     element.classList.add("lword"+lng);
@@ -345,6 +376,9 @@ function printWord(prefix, element, w, wid, lng, col, callback) {
             }
         };
         img.src=w.substring(4);
+        if (window.innerWidth < 481 || window.innerHeight < 481) {
+            img.style.maxHeight = "40px";
+        }
         element.appendChild(img);
     } else {
         moveDiv(element);
@@ -377,13 +411,18 @@ function hasOverlap(arr, p) {
 }
 var yWordOffset = 21;
 function moveDiv(element, pnt) {
+    var xWordWidth = 150;
     if (pnt) {
         element.style.left = pnt.x;
         element.style.top = pnt.y;
     } else {
         var rect = getRect(element);
-        element.style.left = "" + Math.floor((Math.random() * (window.innerWidth-Math.max(150, rect.w))) + 1) + "px";
-        element.style.top = "" + Math.floor((Math.random() * (window.innerHeight-yWordOffset - rect.h - 1)) + yWordOffset) + "px";
+        let xw = xWordWidth;
+        if (window.innerWidth < 481 || window.innerHeight < 481) {
+            xw = 50;
+        }        
+        element.style.left = "" + Math.floor((Math.random() * (window.innerWidth-Math.max(xw, rect.w))) + 1) + "px";
+        element.style.top = "" + Math.floor((Math.random() * (window.innerHeight-yWordOffset*1.5 - rect.h - 1)) + yWordOffset) + "px";
     }
 }
 
@@ -464,6 +503,7 @@ function addWord(e, wordDivs, wordsid, other, arr, idx, callback) {
 // TODO on end loading
     if (other && e.id in wordrate && wordrate[e.id] > 5) {
         other.push(e);
+        nextWord(e, wordDivs, wordsid, other, arr, idx, callback);
     } else {
         wordsid.push(e);
         if (!other && wordsid.length >= 10) {
@@ -507,33 +547,14 @@ function addWord(e, wordDivs, wordsid, other, arr, idx, callback) {
             }
             
             if (cnt) {
-                if (idx < arr.length) {
-                    addWord(arr[idx], wordDivs, wordsid, other, arr, idx+1, callback);
-                } else {
-                    if (other) {
-                        if (wordsid.length < 10 && other.length > 0) {
-                            shuffle(other);
-                            addWord(other[0], wordDivs, wordsid, null, other, 1, callback);
-                        } else {
-                            other.forEach(function(el) {
-                                wordsid.push(el);
-                            });
-                            if (callback) {
-                                callback();
-                            }
-                        }
-                    } else {
-                        if (callback) {
-                            callback();
-                        }
-                    }
-                }
+                nextWord(e, wordDivs, wordsid, other, arr, idx, callback);
             } else {
                 if (other) {
                     other.forEach(function(el) {
                         wordsid.push(el);
                     });
                 }
+                countRates();
                 if (callback) {
                     callback();
                 }
@@ -543,6 +564,55 @@ function addWord(e, wordDivs, wordsid, other, arr, idx, callback) {
             printWords(e, eww, 1, onAdd);
         });
     }    
+}
+function countRates() {
+    var allRate = 0,
+        minRate,
+        maxRate;
+    let j = 0;
+    for (let i in wordrate) {
+        if (minRate === undefined) {
+            minRate = wordrate[i];
+        } else {
+            minRate = Math.min(minRate, wordrate[i]);
+        }
+        if (maxRate === undefined) {
+            maxRate = wordrate[i];
+        } else {
+            maxRate = Math.max(maxRate, wordrate[i]);
+        }
+        allRate += wordrate[i];
+        j++;
+    }
+    if (j != 0) {
+        allRate = allRate / j;
+    }
+    document.getElementById('allRate').innerHTML = "Rate:" + allRate + ", Max:" + maxRate + ", Min:" + minRate;
+}
+function nextWord(e, wordDivs, wordsid, other, arr, idx, callback) {
+    if (idx < arr.length) {
+        addWord(arr[idx], wordDivs, wordsid, other, arr, idx+1, callback);
+    } else {
+        if (other) {
+            if (wordsid.length < 10 && other.length > 0) {
+                shuffle(other);
+                addWord(other[0], wordDivs, wordsid, null, other, 1, callback);
+            } else {
+                other.forEach(function(el) {
+                    wordsid.push(el);
+                });
+                countRates();
+                if (callback) {
+                    callback();
+                }
+            }
+        } else {
+            countRates();
+            if (callback) {
+                callback();
+            }
+        }
+    }
 }
 
 function printWords(e, eww, idx, onAdd) {
@@ -582,12 +652,17 @@ function shuffle(a) {
 </script>
 
 <div id="controls" class="control">
+<form class="inline" style="border: double;">
 <input type="file" id="files" name="files[]" />
+<button type="reset" value="Reset">x</button>
+</form>
+<div class="inline" id="allRate">Rate:</div>
+<br>
 <div class="inline">User: <input type="text" id="uname" name="uname" size="10"/></div>
 <div class="inline">Theme: <input type="text" id="theme" name="theme" size="12" /></div>
 <input type="button" onclick="saveSettings()" value="Save"/>
 <input type="button" onclick="startGame(true)" value="Start"/>
-</id>
+</div>
 
 <script>
     function handleFileSelect(evt) {
