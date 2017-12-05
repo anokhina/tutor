@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 Veronica Anokhina.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!--
+https://github.com/emacsmirror/addressbook/blob/master/vcard-21.txt
+https://www.ietf.org/rfc/rfc2426.txt
+https://tools.ietf.org/html/rfc6350
+-->
+<html>
+<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style type="text/css">
+html, body {
+    /*height:99%;*/
+    width:99%;
+}   
+.inline {
+    display: inline-block;
+    padding-top: 2px;
+}  
+  </style>
+
+<body>
+
+<script>
+var CONST_VCARD_N = "N";
+var CONST_VCARD_VERSION = "VERSION";
+var CONST_VCARD_FN = "FN";
+var CONST_VCARD_BDAY = "BDAY";
+var CONST_VCARD_TEL = "TEL";
+var CONST_VCARD_PHOTO = "PHOTO";
+var CONST_VCARD_NOTE = "NOTE";
+var CONST_VCARD_ANNIVERSARY = "X-ANNIVERSARY";
+var CONST_VCARD_EMAIL = "EMAIL";
+var CONST_VCARD_ADR = "ADR";
+var CONST_VCARD_URL = "URL";
+var CONST_VCARD_ORG = "ORG";
+var CONST_VCARD_PARAM = {}; 
+
+CONST_VCARD_PARAM[CONST_VCARD_N] = true;
+CONST_VCARD_PARAM[CONST_VCARD_VERSION] = true;
+CONST_VCARD_PARAM[CONST_VCARD_FN] = true;
+CONST_VCARD_PARAM[CONST_VCARD_BDAY] = true;
+CONST_VCARD_PARAM[CONST_VCARD_TEL] = true;
+CONST_VCARD_PARAM[CONST_VCARD_PHOTO] = true;
+CONST_VCARD_PARAM[CONST_VCARD_NOTE] = true;
+CONST_VCARD_PARAM[CONST_VCARD_ANNIVERSARY] = true;
+CONST_VCARD_PARAM[CONST_VCARD_EMAIL] = true;
+CONST_VCARD_PARAM[CONST_VCARD_ADR] = true;
+CONST_VCARD_PARAM[CONST_VCARD_URL] = true;
+CONST_VCARD_PARAM[CONST_VCARD_ORG] = true;
+
+var __escape = document.createElement('textarea');
+function escapeHTML(html) {
+    __escape.textContent = html;
+    return __escape.innerHTML;
+}
+
+function unescapeHTML(html) {
+    __escape.innerHTML = html;
+    return __escape.textContent;
+}
+
+function showStatus(o) {
+    document.getElementById('opstatus').innerHTML = new Date().toISOString() + ": " + escapeHTML(o);
+}
+function handleFileSelect(evt) {
+    if (window.File && window.FileReader && window.FileList && window.Blob) {
+
+    } else {
+        alert('The File APIs are not fully supported in this browser.');
+        return;
+    }
+
+    var files = evt.target.files;
+
+    var output = [];
+    for (var i = 0, f; f = files[i]; i++) {
+        var reader = new FileReader();
+        reader.readAsText (f);
+        reader.onload = function(e) {
+            var text = reader.result;
+            try {
+                importData(text);
+            } catch (e) {
+                console.log("import error", e);
+                showStatus("import error");
+            }
+        };
+    }
+}
+
+function importData(text) {
+    var CONST_BEGIN = "BEGIN:VCARD", CONST_END="END:VCARD";
+    var bv, ev;
+    bv = text.indexOf(CONST_BEGIN);
+    ev = text.indexOf(CONST_END, bv + CONST_BEGIN.length);
+    while(bv >=0 && ev >0) {
+        importVCard(text.substring(bv + CONST_BEGIN.length, ev));
+        bv = text.indexOf(CONST_BEGIN, ev + CONST_END.length);
+        ev = text.indexOf(CONST_END, bv + CONST_BEGIN.length);
+    }
+}
+function importVCard(text) {
+    var lines = text.split("\n");
+    var lastProp = null, obj = {}, robj = {};
+    for(let i = 0; i < lines.length; i++) {
+        if (lines[i].charAt(0) === ' ') {
+            if (lastProp) {
+                obj[lastProp] = obj[lastProp] + lines[i];
+            }
+        } else if (lines[i].charAt(0) === '=' ) {
+            if (lastProp) {
+                obj[lastProp] = obj[lastProp] + lines[i].substring(1);
+            }
+        } else {
+            let keyVal = lines[i].split(":");
+            if (keyVal.length > 1) {
+                lastProp = keyVal[0];
+                obj[lastProp] = keyVal[1];
+            } else {
+                lastProp = null;
+            }
+        }
+    }
+    var CONST_ENC = ";CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE";
+    for (var k in obj) {
+        let idx = k.indexOf(CONST_ENC);
+        if (idx > 0) {
+            robj[k.replace(CONST_ENC, "")] = fromEncodedValue(obj[k]);
+        } else {
+            robj[k] = obj[k];
+        }
+    }
+    //TODO check version
+    //CONST_VCARD_PARAM
+    obj = {};
+    for (var k in robj) {
+        var used = false;
+        for (var kk in CONST_VCARD_PARAM) {
+            if (k.startsWith(kk)) {
+                obj[k] = robj[k];
+                used = true;
+                break;
+            }
+        }
+        if (!used) {
+            let newk =prompt("Unknown option with value " + robj[k], k);
+            if (newk) {
+                let newkval =prompt("value for " + newk, robj[k]);
+                obj[newk] = newkval;
+            } else if (!confirm("Continue?")) {
+                //TODO
+                break;
+            }
+        }
+    }
+    
+    console.log(obj);
+}
+function fromEncodedValue(str) {
+    var arr = str.split(";"), ret = "";
+    for (let i = 0; i < arr.length; i++) {
+        if (i > 0) ret += ";";
+        if (arr[i]) {
+            ret += fromEncoded(arr[i]);
+        }
+    }
+    return ret;
+}
+var utf8decoder = new TextDecoder('utf-8');
+function fromEncoded(str) {
+    var charArr = str.split("=");
+    var intArr = [];
+    for(let i = 0; i < charArr.length; i++) {
+        if (charArr[i]) {
+            try {
+                intArr.push(parseInt(charArr[i], 16))
+            } catch (e) {
+                console.log(e);
+            }
+        } else if (i > 0) {
+            intArr.push(0);
+        }
+    }
+    return utf8decoder.decode(new Uint8Array(intArr));
+}
+</script>
+
+Test
+<a href="tel: +71231234567">+71231234567</a>
+
+<table border=0 style="width:100%"><tr>
+<td>&nbsp;<div id="opstatus" class="inline">Ok</div>
+</td>
+</tr>
+</table>
+
+<form id="exportForm">
+<table border=1 style="width:100%"><tr>
+<td>
+Import: <input type="file" id="files" name="files[]" />
+<button type="reset" value="Reset">Reset</button>
+</td>
+</tr>
+</table>
+</form>
+
+<script>
+document.getElementById('files').addEventListener('change', handleFileSelect, false);
+</script>
+</body>
+</html>
