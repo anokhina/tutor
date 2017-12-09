@@ -1,1 +1,9 @@
-ink,чернила,jug,кувшин,kangaroo,кенгуру,lamp,лампа,mouse,мышь,nest,гнездо,orange,апельсин,pin,булавка,queen,королева
+ink,чернила,
+jug,кувшин,
+kangaroo,кенгуру,
+lamp,лампа,
+mouse,мышь,
+nest,гнездо,
+orange,апельсин,
+pin,булавка,
+queen,королева

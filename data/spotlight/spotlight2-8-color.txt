@@ -1,0 +1,12 @@
+red,    <div style="background:red;    display:inline-block;width:20px;">&nbsp;</div>красный,
+yellow, <div style="background:yellow; display:inline-block;width:20px;">&nbsp;</div>жёлтый,
+green,  <div style="background:green;  display:inline-block;width:20px;">&nbsp;</div>зелёный,
+white,  <div style="background:white;  display:inline-block;width:20px;">&nbsp;</div>белый,
+blue,   <div style="background:blue;   display:inline-block;width:20px;">&nbsp;</div>синий,
+colour, цвет,
+black,  <div style="background:black;  display:inline-block;width:20px;">&nbsp;</div>чёрный,
+pink,   <div style="background:pink;   display:inline-block;width:20px;">&nbsp;</div>розовый,
+orange, <div style="background:orange; display:inline-block;width:20px;">&nbsp;</div>оранжевый,
+brown,  <div style="background:brown;  display:inline-block;width:20px;">&nbsp;</div>коричневый,
+violet, <div style="background:violet; display:inline-block;width:20px;">&nbsp;</div>фиолетовый,
+purple, <div style="background:purple; display:inline-block;width:20px;">&nbsp;</div>пурпурный
