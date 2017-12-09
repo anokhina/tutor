@@ -1,0 +1,10 @@
+field,поле,
+cow,корова,
+road,дорога,
+garden,сад,
+hill,холм,
+bridge,мост,
+apple tree,яблоня,
+sheep,овца,
+horse,лошадь,
+river,река

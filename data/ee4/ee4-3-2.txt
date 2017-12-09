@@ -1,0 +1,20 @@
+country, страна, деревня |
+in the country, в деревне |
+capital, столица |
+city, город(большой) |
+town, город(маленький) |
+people, люди |
+new, новый |
+nice, хорошенький |
+dirty, грязный |
+clean, чистый |
+large, огромный |
+beautiful, красивый |
+wide, широкий |
+old, старый |
+dark, тёмный |
+tall, высокий |
+very, очень |
+people, люди |
+but, но |
+at all, совсем

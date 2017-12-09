@@ -1,0 +1,18 @@
+dig, копать |
+ground, земля |
+put, класть |
+seed, семечко |
+plant, сажать (рассаду) |
+water, вода, поливать |
+weather, погода |
+become, становиться |
+cold, холодно |
+windy, ветренно |
+continue, проделжать |
+work, работать |
+spring, весна |
+every, каждый |
+merry, весёлый |
+bird, птица |
+sunny, солнечно |
+warm, тепло 
