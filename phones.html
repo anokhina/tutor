@@ -32,6 +32,13 @@ html, body {
     display: inline-block;
     padding-top: 2px;
 }  
+.photo {
+    padding: 5px;
+    float: left;
+}
+.right {
+    float: right;
+}
   </style>
 
 <body>
@@ -64,6 +71,43 @@ CONST_VCARD_PARAM[CONST_VCARD_ADR] = true;
 CONST_VCARD_PARAM[CONST_VCARD_URL] = true;
 CONST_VCARD_PARAM[CONST_VCARD_ORG] = true;
 
+function toObject(arr) {
+    var ret = {};
+    for (let i = 0; i < arr.length; ++i) {
+        ret[i] = arr[i];
+    }
+    ret.length = arr.length;
+    return ret;
+}
+function saveAs(data, filename) {
+    var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
+    if (window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveBlob(blob, filename);
+    } else {
+        var elem = window.document.createElement('a');
+        elem.href = window.URL.createObjectURL(blob);
+        elem.download = filename;        
+        document.body.appendChild(elem);
+        elem.click();        
+        document.body.removeChild(elem);
+    }
+}
+function saveObj2FS(obj, filePrefix) {
+    console.log(obj, JSON.stringify( obj, null, 2 ));
+    var text = JSON.stringify( obj, null, 2 );
+    let obj1 = JSON.parse(text);
+    obj1.length = obj.length;
+    text = JSON.stringify( obj1, null, 2 );
+    
+    var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+    var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
+    var filenameUname = "-" + "events" + "-";
+    if (filePrefix) {
+    } else {
+        filePrefix = "exportData";
+    }
+    saveAs(blob, filePrefix+filenameUname+todayDate+".json");
+}
 var __escape = document.createElement('textarea');
 function escapeHTML(html) {
     __escape.textContent = html;
@@ -106,16 +150,20 @@ function handleFileSelect(evt) {
 
 function importData(text) {
     var CONST_BEGIN = "BEGIN:VCARD", CONST_END="END:VCARD";
-    var bv, ev;
+    var bv, ev, exists = [];
     bv = text.indexOf(CONST_BEGIN);
     ev = text.indexOf(CONST_END, bv + CONST_BEGIN.length);
     while(bv >=0 && ev >0) {
-        importVCard(text.substring(bv + CONST_BEGIN.length, ev));
+        importVCard(text.substring(bv + CONST_BEGIN.length, ev), exists, null);
         bv = text.indexOf(CONST_BEGIN, ev + CONST_END.length);
         ev = text.indexOf(CONST_END, bv + CONST_BEGIN.length);
     }
+    console.log("------0----", exists.length);
+    if (exists.length > 0) {
+        saveObj2FS(toObject(exists), "importErrorExists");
+    }
 }
-function importVCard(text) {
+function importVCard(text, exists, callback) {
     var lines = text.split("\n");
     var lastProp = null, obj = {}, robj = {};
     for(let i = 0; i < lines.length; i++) {
@@ -153,13 +201,16 @@ function importVCard(text) {
         var used = false;
         for (var kk in CONST_VCARD_PARAM) {
             if (k.startsWith(kk)) {
-                obj[k] = robj[k];
+                if  (k.startsWith(CONST_VCARD_VERSION)) {} else {
+                    obj[k] = robj[k];
+                }
                 used = true;
                 break;
             }
         }
         if (!used) {
-            let newk =prompt("Unknown option with value " + robj[k], k);
+            let newk = prompt("Unknown option with value " + robj[k], k);
+            //TODO check entered
             if (newk) {
                 let newkval =prompt("value for " + newk, robj[k]);
                 obj[newk] = newkval;
@@ -171,6 +222,7 @@ function importVCard(text) {
     }
     
     console.log(obj);
+    addPhone(db, obj, exists, callback);
 }
 function fromEncodedValue(str) {
     var arr = str.split(";"), ret = "";
@@ -215,13 +267,364 @@ Test
 <td>
 Import: <input type="file" id="files" name="files[]" />
 <button type="reset" value="Reset">Reset</button>
+<input type="button" onclick="showTables()" value="Log"/>
+
 </td>
 </tr>
 </table>
 </form>
 
+<form id="searchForm" onsubmit="showPhones(db); return false;">
+<table border=0 style="width:100%"><tr>
+<td>
+<input type="submit" value="Log">
+</td></tr><tr><td>
+<div>Name:</div><input type="text" id="fename" name="fename" style="width:99%"/>
+</td></tr><tr><td>
+<div class="inline">Limit: <input type="text" id="elimit" name="elimit" value="30" size="4" min="5" maxlength="3" onchange="document.getElementById('eoffset').step=this.value;" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+<div class="inline">Offset: <input id="eoffset" name="eoffset" value="0" step="30" type="number" min="0" maxlength="40" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+</td></tr>
+</table>
+</form>
+
+<table id="phoneListTable" border="1" width="99%" style="margin-top: .5em;" >
+</table>
+
 <script>
+function rowItem (results_rows, i) {
+    if ( "item" in results_rows ) {
+        return results_rows.item(i);
+    } else {
+        return results_rows[i];
+    }
+}
+function showPhones(db, callback) {
+    db.transaction(function (tx) {
+        //date(l/1000,'unixepoch','localtime') //sqlite ms to date
+        var limit = document.getElementById('elimit').value, 
+            offset = document.getElementById('eoffset').value,
+            fename = document.getElementById('fename').value;
+        var sqlparam = [limit, offset];
+        var sql = 
+        "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
+        " AND t1.id IN ( SELECT id FROM idphone ORDER BY name LIMIT ? OFFSET ?) ORDER BY t1.name";
+        if (fename) {
+            sqlparam = [fename, limit, offset];
+sql = 
+        "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
+        " AND t1.id IN ( SELECT id FROM idphone WHERE id IN (SELECT cardid FROM phoneProp WHERE pval LIKE ? GROUP BY cardid) ORDER BY name LIMIT ? OFFSET ?) " +
+        " ORDER BY t1.name";
+        }
+        tx.executeSql(sql, sqlparam, 
+            function (tx, results) {
+                if (callback) {
+                    callback(results.rows);
+                } else {
+                    fillTable(fillList(results.rows));
+                    //fillTable(results.rows);
+                }
+            },
+            function(err) { 
+                //console.log(err);
+                showStatus("Error");
+            }
+        );
+    });
+}
+function editPhone(o) {
+}
+function fillList(results_rows) {
+    var len = results_rows.length;
+                
+    //ename, ememo, id, elen, pdate, edate, dlen
+    //1.name, t2.id, t2.cardid, t2.prop, t2.pval
+    var columnNames = {id: "", cardid: "", name: "", prop: "", pval: ""};
+    var trow = 0;
+    var row;
+    var ret = {};
+    ret._order = [];
+    for (var i = 0; i < len; i++) {
+        var rowIt = rowItem(results_rows,i);
+        var cardid = rowIt["cardid"],
+            id = rowIt["id"],
+            name = rowIt["name"],
+            prop = rowIt["prop"],
+            pval = rowIt["pval"];
+        
+        var obj = {};
+        if (cardid in ret) {
+            obj = ret[cardid];
+        } else {
+            ret[cardid] = obj;
+            obj["cardid"] = cardid;
+            obj["name"] = name;
+            obj["props"] = {};
+            ret._order.push(obj);
+        }
+        if (prop in obj["props"]) {
+        } else {
+            obj["props"][prop] = [];
+        }
+        obj["props"][prop].push({id: id, prop:prop, pval:pval});
+    }
+    console.log(ret);
+    return ret;
+}
+function fillTable(results_rows) {
+    var len = results_rows._order.length;
+                
+    var table = document.getElementById("phoneListTable");
+    while(table.rows.length > 0) {
+        table.deleteRow(0);
+    }
+
+    //1.name, t2.id, t2.cardid, t2.prop, t2.pval
+    var columnNames = {cardid: "", name: "", id: "", prop: "", pval: ""};
+    
+    var trow = 0, j, row, cell;
+
+    {
+        row = table.insertRow(trow++);
+        j = 0;
+        {
+            cell = row.insertCell(j);
+            cell.colSpan = 1;
+            j++;
+            var element = document.createElement("div");
+            element.classList.add("inline");
+            //element.setAttribute("id", wid);
+            cell.appendChild(element);
+            element.innerHTML = escapeHTML("id");
+        }
+        {
+            cell = row.insertCell(j);
+            cell.colSpan = 2;
+            j++;
+            var element = document.createElement("div");
+            element.classList.add("inline");
+            //element.setAttribute("id", wid);
+            cell.appendChild(element);
+            element.innerHTML = escapeHTML("name");
+        }
+    }
+    for (var i = 0; i < len; i++) {
+        var rowIt = rowItem(results_rows._order,i);
+        row = table.insertRow(trow++);
+        j = 0;
+        {
+            cell = row.insertCell(j);
+            cell.colSpan = 1;
+            j++;
+            var element = document.createElement("div");
+            element.classList.add("inline");
+            //element.setAttribute("id", wid);
+            cell.appendChild(element);
+            element.innerHTML = escapeHTML(rowIt["cardid"]);
+        }
+        {
+            cell = row.insertCell(j);
+            var nameCell = cell;
+            cell.colSpan = 2;
+            j++;
+            var element = document.createElement("div");
+            element.classList.add("inline");
+            //element.setAttribute("id", wid);
+            cell.appendChild(element);
+            element.innerHTML = escapeHTML(rowIt["name"]);
+        }
+        
+        for (var pr in rowIt.props) {
+            var pra = rowIt.props[pr];
+            
+            for (var k = 0; k < pra.length; k++) {
+                var elm = pra[k];
+                if (elm["prop"].startsWith("PHOTO")) {
+                    {
+                        var img = document.createElement("img");
+                        img.src = "data:image/jpeg;base64," + elm["pval"];
+                        
+                        //nameCell.appendChild(img);
+                        nameCell.insertBefore(img, nameCell.firstChild);
+                        img.classList.add("photo");
+                    }
+                } else {
+                    row = table.insertRow(trow++);
+                    j = 0;
+                
+                    var propName = elm["prop"];
+                    ["id", "prop", "pval"].forEach(function (el) {
+                        cell = row.insertCell(j);
+                        cell.colSpan = 1;
+                        j++;
+                        var element = document.createElement("div");
+                        element.classList.add("inline");
+                        //element.setAttribute("id", wid);
+                        cell.appendChild(element);
+                        if (propName.startsWith(CONST_VCARD_TEL) && el == "pval") {
+                            var tel = escapeHTML(elm[el]);
+                            element.innerHTML = '<a href="tel: ' + tel + '">' + tel + '</a>';
+                        } else {
+                            element.innerHTML = escapeHTML(elm[el]);
+                        }
+                        if (el == "id") {
+                            element.classList.add("right");
+                        }
+                    });
+                }
+            }
+        }
+        
+        /*
+            if (p == "id") {
+                cell.setAttribute("onclick", "editPhone("+JSON.stringify(rowIt)+")");
+            }
+        */
+        //console.log(i, results_rows.item(i));
+    }
+}
+function showTables() {
+showTable(db, "idphone");
+showTable(db, "phoneProp");
+}
+
 document.getElementById('files').addEventListener('change', handleFileSelect, false);
+    var db = openDatabase('sevnPhones', '1.0', 'Phones db', 20 * 1024 * 1024);
+//dropTables(db, ["phoneProp", "idphone"]);
+    
+    db.transaction(
+        function(transaction) {
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS idphone ' +
+                '  (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ' +
+                '   name TEXT);'
+            );
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS phoneProp ' +
+                '  (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ' +
+                '   cardid INTEGER NOT NULL,'  +
+                '   prop TEXT NOT NULL,'  +
+                '   pval TEXT NOT NULL,' +
+                '   FOREIGN KEY(cardid) REFERENCES idphone(id) );'
+            );
+        }
+    );    
+function dropTables(db, names) {
+    db.transaction(
+        function(transaction) {
+            names.forEach(function(name) {
+                transaction.executeSql(
+                    'DROP TABLE IF EXISTS ' + name
+                );
+            });
+        }
+    );
+}
+    
+function addPhone(db, obj, exists, callback) {
+    var fn = null;
+    for(let p in obj) {
+        if (p.startsWith(CONST_VCARD_FN)) {
+            fn = obj[p];
+        }
+    }
+
+    findPhone(db, fn, 
+        function() {
+            exists.push(obj);
+            console.log("-----------", exists.length);
+            if (callback) {
+                callback();
+            }
+        }, 
+        function() {
+            addPhoneDb(db, obj, fn, callback);
+        }
+    );
+}
+
+function addPhoneDb(db, obj, fn, callback) {
+    if (fn) {
+        db.transaction(function (tx) {
+            tx.executeSql('INSERT INTO idphone (name) VALUES (?)', [fn], 
+                function(transaction, results){ 
+                    showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
+                    //console.log(tx,db); 
+                    addPhoneProp(tx, results.insertId, obj, callback);
+                }, 
+                function(err) { 
+                    showStatus("Error");
+                    console.log(err);
+                    if (callback) {
+                        callback(err);
+                    }
+                    return true;
+                }
+            );
+        });
+    }
+}    
+function addPhoneProp(tx, cardid, obj, callback) {
+    for (var p in obj) {
+        tx.executeSql('INSERT INTO phoneProp (cardid, prop, pval) VALUES (?, ?, ?)', [cardid, p, obj[p]], 
+            function(transaction, results){ 
+                showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
+                //console.log(results); 
+                if (callback) {
+                    callback(null, results);
+                }
+            }, 
+            function(err) { 
+                showStatus("Error");
+                console.log(err, cardid, p, obj[p]);
+                if (callback) {
+                    callback(err);
+                }
+                return true;
+            }
+        );
+    }
+}
+function findPhone(db, name, callbackFound, callbackNotFound) {
+    db.transaction(function (tx) {
+        tx.executeSql('SELECT id FROM idphone WHERE name = ?', [name], 
+            function (tx, results) {
+                if (results.rows.length) {
+                    if (callbackFound) {
+                        callbackFound(results);
+                    }
+                } else {
+                    if (callbackNotFound) {
+                        callbackNotFound(results);
+                    }
+                }
+            },
+            function(err) { 
+                console.log(err);
+            }
+        );
+    });
+}  
+function showTable(db, table) {
+    db.transaction(function (tx) {
+        tx.executeSql('SELECT ROWID, * FROM ' + table, [], 
+            function (tx, results) {
+                var len = results.rows.length;
+                let msg = "<p>Found rows: " + len + "</p>";
+                console.log(msg);
+        
+                for (let i = 0; i < len; i++) {
+                    console.log(i, results.rows.item(i));
+                }
+            },
+            function(err) { 
+                console.log(err);
+            }
+        );
+    });
+}  
+showTable(db, "idphone");
+showTable(db, "phoneProp");
+
 </script>
 </body>
 </html>
