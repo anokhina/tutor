@@ -334,6 +334,7 @@ function fromEncoded(str) {
 
 <div class="tab">
   <button class="tablinks" onclick="openTab(event, 'Find')" id="defaultOpen">Find</button>
+  <button class="tablinks" onclick="openTab(event, 'Edit')">Edit</button>
   <button class="tablinks" onclick="openTab(event, 'Import')">Import</button>
   <button class="tablinks" onclick="openTab(event, 'Errors')">Errors</button>
 </div>
@@ -344,6 +345,8 @@ function fromEncoded(str) {
 <table border=0 style="width:100%"><tr>
 <td>
 <input type="submit" value="Log">
+<input type="button" onclick="showPhones(db, 2);" value="Count"/>
+<div id="countDiv" class="inline" style="padding-left:5px;"></div>
 </td></tr><tr><td>
 <table border=0 style="width:100%">
 <tr><td style="width:1%">Property:</td><td><input type="text" id="feprop" name="feprop" style="width:99%"/></td></tr>
@@ -355,6 +358,11 @@ function fromEncoded(str) {
 </td></tr>
 </table>
 </form>
+</div>
+
+<div id="Edit" class="tabcontent">
+  <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+  Editor
 </div>
 
 <div id="Import" class="tabcontent">
@@ -378,7 +386,6 @@ Import: <input type="file" id="files" name="files[]" />
 </div>
 
 
-
 <table id="phoneListTable" border="1" width="99%" style="margin-top: .5em;" >
 </table>
 
@@ -390,7 +397,8 @@ function rowItem (results_rows, i) {
         return results_rows[i];
     }
 }
-function showPhones(db, callback) {
+function showPhones(db, isCount, callback) {
+    document.getElementById("countDiv").innerHTML = "";
     db.transaction(function (tx) {
         //date(l/1000,'unixepoch','localtime') //sqlite ms to date
         var limit = document.getElementById('elimit').value, 
@@ -398,38 +406,61 @@ function showPhones(db, callback) {
             feprop = document.getElementById('feprop').value,
             fename = document.getElementById('fename').value;
         var sqlparam = [limit, offset];
+        var sqlparamCount = [];
         var sql = 
+            "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
+            " AND t1.id IN ( SELECT id FROM idphone ORDER BY name LIMIT ? OFFSET ?) ORDER BY t1.name";
+        var sqlCount = "SELECT count(id) AS cnt FROM idphone";
             "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
             " AND t1.id IN ( SELECT id FROM idphone ORDER BY name LIMIT ? OFFSET ?) ORDER BY t1.name";
         if (fename) {
             if (feprop) {
                 sqlparam = [feprop, fename, limit, offset];
+                sqlparamCount = [feprop, fename];
                 sql = 
                     "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
                     " AND t1.id IN ( SELECT id FROM idphone WHERE id IN (SELECT cardid FROM phoneProp WHERE prop LIKE ? AND pval LIKE ? GROUP BY cardid) ORDER BY name LIMIT ? OFFSET ?) " +
                     " ORDER BY t1.name";
+                sqlCount = "SELECT count(*)  AS cnt FROM (SELECT cardid FROM phoneProp WHERE prop LIKE ? AND pval LIKE ? GROUP BY cardid)";
             } else {
                 sqlparam = [fename, limit, offset];
+                sqlparamCount = [fename];
                 sql = 
                     "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
                     " AND t1.id IN ( SELECT id FROM idphone WHERE id IN (SELECT cardid FROM phoneProp WHERE pval LIKE ? GROUP BY cardid) ORDER BY name LIMIT ? OFFSET ?) " +
                     " ORDER BY t1.name";
+                sqlCount = "SELECT count(*) AS cnt FROM (SELECT cardid FROM phoneProp WHERE pval LIKE ? GROUP BY cardid)";
             }
         }
-        tx.executeSql(sql, sqlparam, 
-            function (tx, results) {
-                if (callback) {
-                    callback(results.rows);
-                } else {
-                    fillTable(fillList(results.rows));
-                    //fillTable(results.rows);
+        console.log(sqlCount, sqlparamCount);
+        if (isCount) {
+            tx.executeSql(sqlCount, sqlparamCount, 
+                function (tx, results) {
+                    var rowIt = rowItem(results.rows,0);
+                    document.getElementById("countDiv").innerHTML = rowIt["cnt"];
+                },
+                function(err) { 
+                    //console.log(err);
+                    showStatus("Error");
                 }
-            },
-            function(err) { 
-                //console.log(err);
-                showStatus("Error");
-            }
-        );
+            );
+        }
+        if (!isCount || isCount && isCount == 2) {
+            tx.executeSql(sql, sqlparam, 
+                function (tx, results) {
+                    if (callback) {
+                        callback(results.rows);
+                    } else {
+                        fillTable(fillList(results.rows));
+                        //fillTable(results.rows);
+                    }
+                },
+                function(err) { 
+                    //console.log(err);
+                    showStatus("Error");
+                }
+            );
+        }
     });
 }
 function editPhone(o) {
