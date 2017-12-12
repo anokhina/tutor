@@ -28,6 +28,9 @@ html, body {
     /*height:99%;*/
     width:99%;
 }   
+body {
+    margin: 2px;
+}
 .inline {
     display: inline-block;
     padding-top: 2px;
@@ -39,6 +42,53 @@ html, body {
 .right {
     float: right;
 }
+
+/* Style the tab */
+div.tab {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+}
+
+/* Style the buttons inside the tab */
+div.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    transition: 0.3s;
+    font-size: large;
+}
+
+/* Change background color of buttons on hover */
+div.tab button:hover {
+    background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+div.tab button.active {
+    background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    border-top: none;
+}
+
+/* Style the close button */
+.topright {
+    float: right;
+    cursor: pointer;
+    font-size: large;
+    padding: 0px 4px 0px 0px;
+}
+
+.topright:hover {color: red;}
   </style>
 
 <body>
@@ -118,9 +168,37 @@ function unescapeHTML(html) {
     __escape.innerHTML = html;
     return __escape.textContent;
 }
-
-function showStatus(o) {
-    document.getElementById('opstatus').innerHTML = new Date().toISOString() + ": " + escapeHTML(o);
+function openTab(evt, cityName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(cityName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+function showStatus(m, o, exc) {
+    var now = new Date().toISOString().slice(0,19).replace("T", " ");
+    if (!o) {
+        o = m;
+    }
+    var msg = now + ": " + escapeHTML(o);
+    var msgSh = now + ": " + escapeHTML(m);
+    var statDiv = document.getElementById('opstatus');
+    if (statDiv) {
+        statDiv.innerHTML = msgSh;
+    }
+    var errDiv = document.getElementById('errorDiv');
+    if (errDiv) {
+        errDiv.innerHTML = msg + "<p>" + errDiv.innerHTML;
+    }
+    if (exc) {
+        console.log(exc);
+    }
 }
 function handleFileSelect(evt) {
     if (window.File && window.FileReader && window.FileList && window.Blob) {
@@ -252,40 +330,54 @@ function fromEncoded(str) {
     return utf8decoder.decode(new Uint8Array(intArr));
 }
 </script>
+<div id="opstatus">Ok</div>
 
-Test
-<a href="tel: +71231234567">+71231234567</a>
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Find')" id="defaultOpen">Find</button>
+  <button class="tablinks" onclick="openTab(event, 'Import')">Import</button>
+  <button class="tablinks" onclick="openTab(event, 'Errors')">Errors</button>
+</div>
 
-<table border=0 style="width:100%"><tr>
-<td>&nbsp;<div id="opstatus" class="inline">Ok</div>
-</td>
-</tr>
-</table>
-
-<form id="exportForm">
-<table border=1 style="width:100%"><tr>
-<td>
-Import: <input type="file" id="files" name="files[]" />
-<button type="reset" value="Reset">Reset</button>
-<input type="button" onclick="showTables()" value="Log"/>
-
-</td>
-</tr>
-</table>
-</form>
-
+<div id="Find" class="tabcontent">
+  <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
 <form id="searchForm" onsubmit="showPhones(db); return false;">
 <table border=0 style="width:100%"><tr>
 <td>
 <input type="submit" value="Log">
 </td></tr><tr><td>
-<div>Name:</div><input type="text" id="fename" name="fename" style="width:99%"/>
+<table border=0 style="width:100%">
+<tr><td style="width:1%">Property:</td><td><input type="text" id="feprop" name="feprop" style="width:99%"/></td></tr>
+<tr><td style="width:1%">Name:</td><td><input type="text" id="fename" name="fename" style="width:99%"/></td></tr>
+</table>
 </td></tr><tr><td>
-<div class="inline">Limit: <input type="text" id="elimit" name="elimit" value="30" size="4" min="5" maxlength="3" onchange="document.getElementById('eoffset').step=this.value;" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
-<div class="inline">Offset: <input id="eoffset" name="eoffset" value="0" step="30" type="number" min="0" maxlength="40" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+<div class="inline"><div class="inline" style="font-size:small">Limit:</div><input type="text"   id="elimit"  name="elimit"  value="30"          size="4" min="5"  maxlength="3" onchange="document.getElementById('eoffset').step=this.value;" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+<div class="inline"><div class="inline" style="font-size:small">Offset:</div><input type="number" id="eoffset" name="eoffset" value="0" step="30" size="6" min="0" maxlength="8"                                                                oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
 </td></tr>
 </table>
 </form>
+</div>
+
+<div id="Import" class="tabcontent">
+  <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+  <form id="exportForm">
+<table border=1 style="width:100%"><tr>
+<td>
+Import: <input type="file" id="files" name="files[]" />
+<button type="reset" value="Reset">Reset</button>
+<input type="button" onclick="showTables()" value="Log"/>
+</td>
+</tr>
+</table>
+</form>
+</div>
+
+<div id="Errors" class="tabcontent">
+  <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+  <span onclick="document.getElementById('errorDiv').innerHTML='<p>'" class="topright">&empty;&nbsp;</span>
+  <div id="errorDiv">Ok</div>
+</div>
+
+
 
 <table id="phoneListTable" border="1" width="99%" style="margin-top: .5em;" >
 </table>
@@ -303,17 +395,26 @@ function showPhones(db, callback) {
         //date(l/1000,'unixepoch','localtime') //sqlite ms to date
         var limit = document.getElementById('elimit').value, 
             offset = document.getElementById('eoffset').value,
+            feprop = document.getElementById('feprop').value,
             fename = document.getElementById('fename').value;
         var sqlparam = [limit, offset];
         var sql = 
-        "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
-        " AND t1.id IN ( SELECT id FROM idphone ORDER BY name LIMIT ? OFFSET ?) ORDER BY t1.name";
+            "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
+            " AND t1.id IN ( SELECT id FROM idphone ORDER BY name LIMIT ? OFFSET ?) ORDER BY t1.name";
         if (fename) {
-            sqlparam = [fename, limit, offset];
-sql = 
-        "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
-        " AND t1.id IN ( SELECT id FROM idphone WHERE id IN (SELECT cardid FROM phoneProp WHERE pval LIKE ? GROUP BY cardid) ORDER BY name LIMIT ? OFFSET ?) " +
-        " ORDER BY t1.name";
+            if (feprop) {
+                sqlparam = [feprop, fename, limit, offset];
+                sql = 
+                    "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
+                    " AND t1.id IN ( SELECT id FROM idphone WHERE id IN (SELECT cardid FROM phoneProp WHERE prop LIKE ? AND pval LIKE ? GROUP BY cardid) ORDER BY name LIMIT ? OFFSET ?) " +
+                    " ORDER BY t1.name";
+            } else {
+                sqlparam = [fename, limit, offset];
+                sql = 
+                    "SELECT t1.name, t2.id, t2.cardid, t2.prop, t2.pval FROM idphone t1, phoneProp t2 WHERE t1.id=t2.cardid "+
+                    " AND t1.id IN ( SELECT id FROM idphone WHERE id IN (SELECT cardid FROM phoneProp WHERE pval LIKE ? GROUP BY cardid) ORDER BY name LIMIT ? OFFSET ?) " +
+                    " ORDER BY t1.name";
+            }
         }
         tx.executeSql(sql, sqlparam, 
             function (tx, results) {
@@ -622,8 +723,8 @@ function showTable(db, table) {
         );
     });
 }  
-showTable(db, "idphone");
-showTable(db, "phoneProp");
+//showTable(db, "idphone");
+//showTable(db, "phoneProp");
 
 </script>
 </body>
