@@ -94,7 +94,7 @@ div.tab button.active {
 <body>
 
 <script>
-var CONST_VCARD_N = "N";
+var CONST_VCARD_N = "N"; //is a concatenation of the Family Name (first field), Given Name (second field), Additional Names (third field), Name Prefix (fourth field), and Name Suffix (fifth field) strings.
 var CONST_VCARD_VERSION = "VERSION";
 var CONST_VCARD_FN = "FN";
 var CONST_VCARD_BDAY = "BDAY";
@@ -102,11 +102,35 @@ var CONST_VCARD_TEL = "TEL";
 var CONST_VCARD_PHOTO = "PHOTO";
 var CONST_VCARD_NOTE = "NOTE";
 var CONST_VCARD_ANNIVERSARY = "X-ANNIVERSARY";
-var CONST_VCARD_EMAIL = "EMAIL";
+var CONST_VCARD_EMAIL = "EMAIL"; //EMAIL;INTERNET:
 var CONST_VCARD_ADR = "ADR";
 var CONST_VCARD_URL = "URL";
 var CONST_VCARD_ORG = "ORG";
 var CONST_VCARD_PARAM = {}; 
+
+var PLACE_TYPE = {
+    "DOM": "domestic",
+    "INTL": "international",
+    "POSTAL": "postal",
+    "PARCEL": "parcel",
+    "HOME": "home",
+    "WORK": "work"
+};
+var PHONE_TYPE = {
+    "PREF": "preferred",
+    "WORK": "work",
+    "HOME": "home",
+    "VOICE": "voice",
+    "FAX": "facsimile (FAX)",
+    "MSG": "messaging service",
+    "CELL": "cellular",
+    "PAGER": "pager",
+    "BBS": "bulletin board service",
+    "MODEM": "MODEM",
+    "CAR": "car-phone",
+    "ISDN": "ISDN",
+    "VIDEO": "video-phone"
+};
 
 CONST_VCARD_PARAM[CONST_VCARD_N] = true;
 CONST_VCARD_PARAM[CONST_VCARD_VERSION] = true;
@@ -346,6 +370,7 @@ function fromEncoded(str) {
 <td>
 <input type="submit" value="Log">
 <input type="button" onclick="showPhones(db, 2);" value="Count"/>
+<button type="reset" value="Reset" style="float: right;">Reset</button>
 <div id="countDiv" class="inline" style="padding-left:5px;"></div>
 </td></tr><tr><td>
 <table border=0 style="width:100%">
@@ -464,6 +489,7 @@ function showPhones(db, isCount, callback) {
     });
 }
 function editPhone(o) {
+    console.log(o);
 }
 function fillList(results_rows) {
     var len = results_rows.length;
@@ -552,6 +578,7 @@ function fillTable(results_rows) {
             //element.setAttribute("id", wid);
             cell.appendChild(element);
             element.innerHTML = escapeHTML(rowIt["cardid"]);
+            cell.setAttribute("onclick", "editPhone("+JSON.stringify(rowIt)+")");
         }
         {
             cell = row.insertCell(j);
