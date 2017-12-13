@@ -29,25 +29,41 @@ html, body {
     width:99%;
 }   
 body {
-    margin: 2px;
+    margin: 0px;
 }
 .inline {
     display: inline-block;
-    padding-top: 2px;
+}
+.padding {
+    padding: 2px;
 }  
 .photo {
     padding: 5px;
     float: left;
 }
+.rowbg {
+    background-color: #ccc;
+}
+.rowbgm {
+    background-color: #ddd;
+}
+.rowbgl {
+    background-color: #f1f1f1;
+}
 .right {
     float: right;
 }
-
+table {
+    border: none;
+}
+textarea { 
+    resize:vertical; 
+}
 /* Style the tab */
 div.tab {
     overflow: hidden;
     border: 1px solid #ccc;
-    background-color: #f1f1f1;
+    background-color: #e5e5e5;
 }
 
 /* Style the buttons inside the tab */
@@ -75,9 +91,10 @@ div.tab button.active {
 /* Style the tab content */
 .tabcontent {
     display: none;
-    padding: 4px 6px;
+    padding: 0px;
     border: 1px solid #ccc;
     border-top: none;
+    background-color: #f1f1f1;
 }
 
 /* Style the close button */
@@ -89,12 +106,26 @@ div.tab button.active {
 }
 
 .topright:hover {color: red;}
+
+#opstatus {
+    background-color: #bbb;
+}
   </style>
 
 <body>
 
 <script>
-var CONST_VCARD_N = "N"; //is a concatenation of the Family Name (first field), Given Name (second field), Additional Names (third field), Name Prefix (fourth field), and Name Suffix (fifth field) strings.
+var CONST_VCARD_N = "N"; 
+//is a concatenation of the Family Name (first field), 
+//Given Name (second field), 
+//Additional Names (third field), 
+//Name Prefix (fourth field), 
+//and Name Suffix (fifth field) strings.
+var CONST_VCARD_N1 = "N1"; //Family Name
+var CONST_VCARD_N2 = "N2"; //Given Name
+var CONST_VCARD_N3 = "N3"; //Additional Name
+var CONST_VCARD_N4 = "N4"; //Name Prefix
+var CONST_VCARD_N5 = "N5"; //Name Suffix
 var CONST_VCARD_VERSION = "VERSION";
 var CONST_VCARD_FN = "FN";
 var CONST_VCARD_BDAY = "BDAY";
@@ -104,19 +135,51 @@ var CONST_VCARD_NOTE = "NOTE";
 var CONST_VCARD_ANNIVERSARY = "X-ANNIVERSARY";
 var CONST_VCARD_EMAIL = "EMAIL"; //EMAIL;INTERNET:
 var CONST_VCARD_ADR = "ADR";
+/*
+;;;Санкт-Петербург;;;RU
+to the post office box;
+the extended address;
+the street address; 
+the locality (e.g., city); 
+the region (e.g., state or province); 
+the postal code; 
+the country name. 
+
+When a component value
+   is missing, the associated component separator MUST still be
+   specified.
+*/
 var CONST_VCARD_URL = "URL";
 var CONST_VCARD_ORG = "ORG";
 var CONST_VCARD_PARAM = {}; 
 
-var PLACE_TYPE = {
+var PARAM_TYPE = {
+    N1: "Family Name",
+    N2: "Given Name",
+    N3: "Additional Name",
+    N4: "Name Prefix",
+    N5: "Name Suffix"
+};
+var PLACE_TYPE = sortObj({
     "DOM": "domestic",
     "INTL": "international",
     "POSTAL": "postal",
     "PARCEL": "parcel",
     "HOME": "home",
     "WORK": "work"
-};
-var PHONE_TYPE = {
+});
+function sortObj(obj) {
+    var tmp = [], ret = {};
+    for (var i in obj) {
+        tmp.push(i);
+    }
+    tmp.sort();
+    tmp.forEach(function (e) {
+        ret[e] = obj[e];
+    });
+    return ret;
+}
+var PHONE_TYPE = sortObj({
     "PREF": "preferred",
     "WORK": "work",
     "HOME": "home",
@@ -130,7 +193,7 @@ var PHONE_TYPE = {
     "CAR": "car-phone",
     "ISDN": "ISDN",
     "VIDEO": "video-phone"
-};
+});
 
 CONST_VCARD_PARAM[CONST_VCARD_N] = true;
 CONST_VCARD_PARAM[CONST_VCARD_VERSION] = true;
@@ -192,7 +255,7 @@ function unescapeHTML(html) {
     __escape.innerHTML = html;
     return __escape.textContent;
 }
-function openTab(evt, cityName) {
+function openTab(evt, tabName) {
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tabcontent");
     for (i = 0; i < tabcontent.length; i++) {
@@ -202,8 +265,10 @@ function openTab(evt, cityName) {
     for (i = 0; i < tablinks.length; i++) {
         tablinks[i].className = tablinks[i].className.replace(" active", "");
     }
-    document.getElementById(cityName).style.display = "block";
-    evt.currentTarget.className += " active";
+    document.getElementById(tabName).style.display = "block";
+    if (evt) {
+        evt.currentTarget.className += " active";
+    }
 }
 function showStatus(m, o, exc) {
     var now = new Date().toISOString().slice(0,19).replace("T", " ");
@@ -290,10 +355,21 @@ function importVCard(text, exists, callback) {
     var CONST_ENC = ";CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE";
     for (var k in obj) {
         let idx = k.indexOf(CONST_ENC);
-        if (idx > 0) {
-            robj[k.replace(CONST_ENC, "")] = fromEncodedValue(obj[k]);
+        if (k.startsWith(CONST_VCARD_N)) {
+            var arr = obj[k].split(";");
+            for (var arri = 0; arri < arr.length; arri++) {
+                if (idx > 0) {
+                    robj["N" + (arri + 1)] = fromEncodedValue(arr[arri]);
+                } else {
+                    robj["N" + (arri + 1)] = arr[arri];
+                }
+            }
         } else {
-            robj[k] = obj[k];
+            if (idx > 0) {
+                robj[k.replace(CONST_ENC, "")] = fromEncodedValue(obj[k]);
+            } else {
+                robj[k] = obj[k];
+            }
         }
     }
     //TODO check version
@@ -387,15 +463,20 @@ function fromEncoded(str) {
 
 <div id="Edit" class="tabcontent">
   <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
-  Editor
+  
+<table id="phoneEditorTable" width="99%" style="margin-top: .5em;" >
+</table>
+  
 </div>
 
 <div id="Import" class="tabcontent">
   <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
   <form id="exportForm">
-<table border=1 style="width:100%"><tr>
+<table style="width:100%"><tr>
 <td>
 Import: <input type="file" id="files" name="files[]" />
+</td></tr>
+<tr><td>
 <button type="reset" value="Reset">Reset</button>
 <input type="button" onclick="showTables()" value="Log"/>
 </td>
@@ -411,7 +492,7 @@ Import: <input type="file" id="files" name="files[]" />
 </div>
 
 
-<table id="phoneListTable" border="1" width="99%" style="margin-top: .5em;" >
+<table id="phoneListTable" width="100%" style="margin-top: .5em;" >
 </table>
 
 <script>
@@ -488,9 +569,6 @@ function showPhones(db, isCount, callback) {
         }
     });
 }
-function editPhone(o) {
-    console.log(o);
-}
 function fillList(results_rows) {
     var len = results_rows.length;
                 
@@ -507,7 +585,12 @@ function fillList(results_rows) {
             id = rowIt["id"],
             name = rowIt["name"],
             prop = rowIt["prop"],
+            propGrp = prop,
             pval = rowIt["pval"];
+        var smIdx = prop.indexOf(";");
+        if (smIdx > 0) {
+            propGrp = prop.substring(0, smIdx);
+        }
         
         var obj = {};
         if (cardid in ret) {
@@ -519,14 +602,241 @@ function fillList(results_rows) {
             obj["props"] = {};
             ret._order.push(obj);
         }
-        if (prop in obj["props"]) {
+        if (propGrp in obj["props"]) {
         } else {
-            obj["props"][prop] = [];
+            obj["props"][propGrp] = [];
         }
-        obj["props"][prop].push({id: id, prop:prop, pval:pval});
+        obj["props"][propGrp].push({id: id, prop:prop, pval:pval});
     }
     console.log(ret);
     return ret;
+}
+function editPhone(rowIt) {
+    console.log(rowIt);
+    //phoneEditorTable
+    var table = document.getElementById("phoneEditorTable");
+    while(table.rows.length > 0) {
+        table.deleteRow(0);
+    }
+    var trow = 0, j, row, cell;
+
+    {
+        row = table.insertRow(trow++);
+        j = 0;
+        {
+            cell = row.insertCell(j);
+            cell.colSpan = 1;
+            j++;
+            var element = document.createElement("div");
+            element.classList.add("inline");
+            //element.setAttribute("id", wid);
+            cell.appendChild(element);
+            element.innerHTML = escapeHTML("id");
+            cell.style.width = "1%";
+        }
+        {
+            cell = row.insertCell(j);
+            cell.colSpan = 2;
+            j++;
+            var element = document.createElement("div");
+            element.classList.add("inline");
+            //element.setAttribute("id", wid);
+            cell.appendChild(element);
+            element.innerHTML = escapeHTML("name");
+        }
+    }
+        row = table.insertRow(trow++);
+        j = 0;
+        {
+            cell = row.insertCell(j);
+            cell.colSpan = 1;
+            j++;
+            var element = document.createElement("div");
+            element.classList.add("inline");
+            //element.setAttribute("id", wid);
+            cell.appendChild(element);
+            element.innerHTML = escapeHTML(rowIt["cardid"]);
+            
+            element = document.createElement("input");
+            element.setAttribute('type', 'button');
+            element.onclick = function () {
+                alert("zzzzz");
+            };
+            element.value = "x";
+            element.setAttribute("title", "Delete");
+            cell.appendChild(element);
+            cell.style.width = "1%";
+        }
+        {
+            cell = row.insertCell(j);
+            var nameCell = cell;
+            cell.colSpan = 2;
+            j++;
+            var element = document.createElement("input");
+            element.setAttribute('type', 'text');
+            cell.appendChild(element);
+            element.value = rowIt["name"];
+            element.style.width = "100%";
+        }
+        
+        for (var pr in rowIt.props) {
+            
+            for (var k = 0; k < rowIt.props[pr].length; k++) {
+                var elm = rowIt.props[pr][k];
+                if (elm["prop"].startsWith("PHOTO")) {
+                    {
+                        var img = document.createElement("img");
+                        img.src = "data:image/jpeg;base64," + elm["pval"];
+                        
+                        //nameCell.appendChild(img);
+                        nameCell.insertBefore(img, nameCell.firstChild);
+                        img.classList.add("photo");
+                    }
+                } else {
+                    row = table.insertRow(trow++);
+                    j = 0;
+                
+                    var propName = elm["prop"];
+                    ["id", "prop"].forEach(function (el) {
+                        cell = row.insertCell(j);
+                        cell.colSpan = 1;
+                        j++;
+                        var element = document.createElement("div");
+                        element.classList.add("inline");
+                        //element.setAttribute("id", wid);
+                        cell.appendChild(element);
+                        if (el == "id") {
+                            cell.style.width = "1%";
+                            element.classList.add("right");
+                            
+                            if (elm["prop"] == "N" 
+                                || elm["prop"] == "N1" 
+                                || elm["prop"] == "N2" 
+                                || elm["prop"] == "N3" 
+                                || elm["prop"] == "N4" 
+                                || elm["prop"] == "N5" 
+                                || elm["prop"] == "FN") {
+                            
+                            } else {
+                                element = document.createElement("input");
+                                element.setAttribute('type', 'button');
+
+                                var rowDel = row, rowId = elm["id"];
+                                var belem = rowIt.props[pr][k];
+                                element.onclick = function () {
+                                    table.deleteRow(rowDel.rowIndex);
+                                    belem._delete = true;
+                                    console.log(rowIt);
+                                };
+                                element.value = "x";
+                                element.setAttribute("title", "Delete");
+                                cell.appendChild(element);
+                            }
+                        } else { 
+                            //if (el == "prop") {
+                            cell.style.width = "30%";
+
+                            var multiSelect = function(propName, elem, typeObj, rowIt) {
+                                var propValue = elem["prop"], idLine = elem["id"];
+                                element.innerHTML = propName;
+                                var propParams = {};
+                                propValue.split(";").forEach(function(e){
+                                    if (propName == e) {} else {
+                                        propParams[e] = 1; //to edit with text field
+                                    }
+                                });
+                       
+                                for (var e in typeObj) {
+                                    var div = document.createElement('div');
+                                    div.classList.add("inline");
+                                    cell.appendChild(div);
+                                    
+                                    var checkbox = document.createElement('input');
+                                    checkbox.type = "checkbox";
+                                    checkbox.name = "ch" + idLine;
+                                    checkbox.value = e;
+                                    checkbox.onchange = function(e) {
+                                        if (e.target.checked) {
+                                            propParams[e.target.value] = 2;
+                                        } else {
+                                            propParams[e.target.value] = 0;
+                                        }
+                                        elem["prop"] = propName;
+                                        for (var ei in propParams) {
+                                            if (propParams[ei] > 0) {
+                                                elem["prop"] += (";" + ei);
+                                            }
+                                        }
+                                        console.log(propParams, elem["prop"], rowIt);
+                                    };
+                                    if (e in propParams && propParams[e]) {
+                                        checkbox.checked = true; 
+                                        propParams[e] = 2;
+                                    }
+                                    div.appendChild(checkbox);
+                                    div.appendChild(document.createTextNode(typeObj[e]));
+                                }
+                            };
+                            
+                            if (
+                                elm["prop"] == "N1" 
+                                || elm["prop"] == "N2" 
+                                || elm["prop"] == "N3" 
+                                || elm["prop"] == "N4" 
+                                || elm["prop"] == "N5" 
+                                ) {
+                            
+                                element.innerHTML = escapeHTML(elm[el]) + " " + PARAM_TYPE[elm[el]];
+                            } else if (elm["prop"].startsWith(CONST_VCARD_TEL)) {
+                                multiSelect(CONST_VCARD_TEL, elm, PHONE_TYPE, rowIt);
+                            } else if (elm["prop"].startsWith(CONST_VCARD_ADR)) {
+                                multiSelect(CONST_VCARD_ADR, elm, PLACE_TYPE, rowIt);
+                            } else if (elm["prop"].startsWith(CONST_VCARD_EMAIL)) {
+                                multiSelect(CONST_VCARD_EMAIL, elm, PLACE_TYPE, rowIt);
+                            } else {
+                                element.innerHTML = escapeHTML(elm[el]);
+                            }
+                        }
+                        
+                        cell.classList.add("rowbgm");
+                    });
+                    ["pval"].forEach(function(el) {
+                        cell = row.insertCell(j);
+                        cell.colSpan = 1;
+                        j++;
+
+                        var element;
+                        element = document.createElement("input");
+                        element.setAttribute('type', 'text');
+                        if (
+                            propName == "N1" 
+                            || propName == "N2" 
+                            || propName == "N3" 
+                            || propName == "N4" 
+                            || propName == "N5" 
+                            ) {
+                            //TODO onchange
+                        } else if (propName == CONST_VCARD_NOTE) {
+                            element = document.createElement("textarea");
+                        } else if (propName == CONST_VCARD_BDAY || propName == CONST_VCARD_ANNIVERSARY) {
+                            element.setAttribute('type', 'date');
+                        } else if (propName == CONST_VCARD_PHOTO) { //TODO
+                        }
+                        cell.appendChild(element);
+                        element.value = elm[el];
+                        element.style.width = "100%";
+                        
+                        var bpr = pr, bk = k, bel = el;
+                        element.onchange = function (e) {
+                            rowIt.props[bpr][bk][bel] = e.target.value;
+                            console.log(rowIt,bpr,bk,bel);
+                        };
+                    });
+                }
+            }
+        }
+    
+    openTab(null, "Edit");
 }
 function fillTable(results_rows) {
     var len = results_rows._order.length;
@@ -543,6 +853,7 @@ function fillTable(results_rows) {
 
     {
         row = table.insertRow(trow++);
+        row.classList.add("rowbg");
         j = 0;
         {
             cell = row.insertCell(j);
@@ -553,6 +864,7 @@ function fillTable(results_rows) {
             //element.setAttribute("id", wid);
             cell.appendChild(element);
             element.innerHTML = escapeHTML("id");
+            cell.style.width = "1%";
         }
         {
             cell = row.insertCell(j);
@@ -568,6 +880,7 @@ function fillTable(results_rows) {
     for (var i = 0; i < len; i++) {
         var rowIt = rowItem(results_rows._order,i);
         row = table.insertRow(trow++);
+        row.classList.add("rowbg");
         j = 0;
         {
             cell = row.insertCell(j);
@@ -579,6 +892,7 @@ function fillTable(results_rows) {
             cell.appendChild(element);
             element.innerHTML = escapeHTML(rowIt["cardid"]);
             cell.setAttribute("onclick", "editPhone("+JSON.stringify(rowIt)+")");
+            cell.style.width = "1%";
         }
         {
             cell = row.insertCell(j);
@@ -594,6 +908,7 @@ function fillTable(results_rows) {
         
         for (var pr in rowIt.props) {
             var pra = rowIt.props[pr];
+
             
             for (var k = 0; k < pra.length; k++) {
                 var elm = pra[k];
@@ -608,6 +923,8 @@ function fillTable(results_rows) {
                     }
                 } else {
                     row = table.insertRow(trow++);
+                    row.classList.add("rowbgl");
+                    
                     j = 0;
                 
                     var propName = elm["prop"];
@@ -627,6 +944,9 @@ function fillTable(results_rows) {
                         }
                         if (el == "id") {
                             element.classList.add("right");
+                        }
+                        if (el == "id" || el == "prop") {
+                            cell.style.width = "1%";
                         }
                     });
                 }
@@ -783,6 +1103,7 @@ function showTable(db, table) {
 }  
 //showTable(db, "idphone");
 //showTable(db, "phoneProp");
+showPhones(db, 2);
 
 </script>
 </body>
