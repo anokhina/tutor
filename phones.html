@@ -807,7 +807,7 @@ function _editPhone(rowIt) {
             element = document.createElement("input");
             element.setAttribute('type', 'button');
             element.onclick = function () {
-                alert("zzzzz");
+                deletePhone(editPhoneObj);
             };
             element.value = "x";
             element.setAttribute("title", "Delete");
@@ -1266,6 +1266,59 @@ function addPhone(db, obj, exists, callback) {
             addPhoneDb(db, obj, fn, callback);
         }
     );
+}
+
+function deletePhone(obj) {
+//////////////////////////////editPhoneObj
+    if (obj.cardid) {
+        db.transaction(function (tx) {
+            deletePhoneProperty(tx, obj, Object.keys(obj.props), 0);
+        });
+    }
+}
+
+function deletePhoneProperty(tx, editPhoneObj, parr, i) {
+    if ( i < parr.length ) {
+        deletePhonePropertyLine(tx, editPhoneObj, parr, i, 0)
+    } else {
+        tx.executeSql('DELETE FROM idphone WHERE id = ? ', [editPhoneObj.cardid], 
+            function(transaction, results){ 
+                showStatus("Deleted: " + results.rowsAffected + " rows");
+                //console.log(tx,db); 
+                editPhoneObj = null;
+                newPhone(editPhoneObj)
+            }, 
+            function(err) { 
+                showStatus("Error");
+                console.log(err);
+                return true;
+            }
+        );
+    }
+}
+function deletePhonePropertyLine(tx, editPhoneObj, parr, i, j) {
+    if (j < editPhoneObj.props[parr[i]].length) {
+        deletePhonePropertyElement(tx, editPhoneObj, parr, i, j, editPhoneObj.props[parr[i]][j]);
+    } else {
+        deletePhoneProperty(tx, editPhoneObj, parr, i+1)
+    }
+}
+function deletePhonePropertyElement(tx, editPhoneObj, parr, i, j, el) {
+    if (el.id) {
+        var sqlParam = [el.id];
+        tx.executeSql('DELETE FROM phoneProp WHERE id = ? ', sqlParam, 
+            function(transaction, results){ 
+                showStatus("Deleted: " + results.rowsAffected);
+                //console.log(results); 
+                deletePhonePropertyLine(tx, editPhoneObj, parr, i, j+1);
+            }, 
+            function(err) { 
+                showStatus("Error");
+                //console.log(err);
+                return true;
+            }
+        );                            
+    }
 }
 function savePhoneProperty(tx, editPhoneObj, parr, i) {
     if ( i < parr.length ) {
