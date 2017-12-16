@@ -21,35 +21,170 @@ limitations under the License.
   <style type="text/css">
 html, body {
     /*height:99%;*/
-    width:99%;
+    width:100%;
+    padding:0px;
+    margin:0px;
 }   
 .inline {
     display: inline-block;
     padding-top: 2px;
 }  
+textarea { 
+    resize:vertical; 
+    padding: 0px;
+    margin: 0px;    
+}
+
+/* Style the tab */
+div.tab {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #e5e5e5;
+}
+
+/* Style the buttons inside the tab */
+div.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    transition: 0.3s;
+    font-size: large;
+}
+
+/* Change background color of buttons on hover */
+div.tab button:hover {
+    background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+div.tab button.active {
+    background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    padding: 0px;
+    border: 1px solid #ccc;
+    border-top: none;
+    background-color: #f1f1f1;
+}
+
+.tcontent {
+    padding: 5px;
+}
+
+/* Style the close button */
+.topright {
+    float: right;
+    cursor: pointer;
+    font-size: large;
+    padding: 0px 4px 0px 0px;
+}
+
+.topright:hover {color: red;}
+
+#opstatus {
+    background-color: #bbb;
+}
+.controldiv {
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 200;
+}
+.controlleddiv {
+    position: relative;
+    top: 50px;
+}
+.rowbg {
+    background-color: #ccc;
+}
+.rowbgm {
+    background-color: #ddd;
+}
+.rowbgl {
+    background-color: #f1f1f1;
+}
+.Reset {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
   </style>
 
 <body>
 
 <script>
-function toObject(arr) {
-    var ret = {};
-    for (var i = 0; i < arr.length; ++i) {
-        ret[i] = arr[i];
-    }
-    ret.length = arr.length;
-    return ret;
-}
-var __escape = document.createElement('textarea');
-function escapeHTML(html) {
-    __escape.textContent = html;
-    return __escape.innerHTML;
-}
+var UTIL = (function(e) {
+    var self = {
+    };
+    
+    self.toObject = function (arr) {
+        var ret = {};
+        for (let i = 0; i < arr.length; ++i) {
+            ret[i] = arr[i];
+        }
+        ret.length = arr.length;
+        return ret;
+    };
+    
+    self.namespace = function(ns) {
+        var o = this, ts = ns.split("."), t;
+        while (ts.length > 0) {
+            t = ts.shift();
+            if (typeof o[t] === "undefined") { o[t] = {};}
+            o = o[t];
+        }
 
-function unescapeHTML(html) {
-    __escape.innerHTML = html;
-    return __escape.textContent;
-}
+        return o;
+    };
+    
+    var __escape = document.createElement('textarea');
+    self.escapeHTML = function(html) {
+        __escape.textContent = html;
+        return __escape.innerHTML;
+    }
+
+    self.unescapeHTML = function (html) {
+        __escape.innerHTML = html;
+        return __escape.textContent;
+    }
+    
+    self.parseDate = function (str) {
+        if (str) {
+            str = str.trim();
+            var d = new Date(str + " UTC"), ds;
+            if(/^(\d){8}$/.test(str)) {
+                var yy = str.substr(0,4),
+                    mm = str.substr(4,2) - 1,
+                    dd = str.substr(6,2);
+                d = new Date(Date.UTC(yy,mm,dd));
+            }
+            try {
+                return d.toISOString().slice(0,10);
+            } catch (e) {
+            }
+        }
+        return null;
+    }
+    
+    self.tokenize = function (s, esc, sep) {
+        for (var a=[], t='', i=0, e=s.length; i<e; i++) {
+            var c = s.charAt(i);
+            if (c == esc) { t+=s.charAt(++i); }
+            else if (c != sep) { t+=c }
+            else { a.push(t); t=''; }
+        }
+        a.push(t);
+        return a;
+    }    
+    
+    return self;
+})();
+
 function generateGuid() {
     return Math.random().toString(36).substring(2, 15) +
         Math.random().toString(36).substring(2, 15);
@@ -145,10 +280,45 @@ function editEvent(obj) {
     document.getElementById('ememo').value = obj["ememo"];
     document.getElementById('elen').value = obj["elen"];
     document.getElementById('edate').value = document.getElementById('edate').value = new Date(obj["edate"]).toISOString().substr(0, 10);
+    openTab({ currentTarget: document.getElementById("buttonEdit") }, "Edit");
+
 }
-function showStatus(o) {
-    document.getElementById('opstatus').innerHTML = new Date().toISOString() + ": " + escapeHTML(o);
+function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    if (evt) {
+        evt.currentTarget.className += " active";
+    }
+    window.scrollTo(0, 0);
 }
+function showStatus(m, o, exc) {
+    var now = new Date().toISOString().slice(0,19).replace("T", " ");
+    if (!o) {
+        o = m;
+    }
+    var msg = now + ": " + UTIL.escapeHTML(o);
+    var msgSh = now + ": " + UTIL.escapeHTML(m);
+    var statDiv = document.getElementById('opstatus');
+    if (statDiv) {
+        statDiv.innerHTML = msgSh;
+    }
+    var errDiv = document.getElementById('errorDiv');
+    if (errDiv) {
+        errDiv.innerHTML = msg + "<p>" + errDiv.innerHTML;
+    }
+    if (exc) {
+        console.log(exc);
+    }
+}
+
 function searchFormReset() {
     document.getElementById("searchForm").reset();
     var zeroDate = new Date();
@@ -225,57 +395,94 @@ function handleFileSelect(evt) {
 }
 </script>
 
-<div id="controls">
-<form id="editForm">
-<table border=0 style="width:100%"><tr>
-<td>&nbsp;<div id="opstatus" class="inline">Ok</div>
-</td></tr><tr><td>
-<input type="text" readonly="true" id="eidprefix" name="eidprefix"/>
-</td></tr><tr><td>
-<input type="text" readonly="true" id="eid" name="eid"/>
-<div class="inline">Date: <input type="date" id="edate" name="edate" /></div>
-<div class="inline">Length: <input type="text" id="elen" name="elen" value="1" type="number" size="4" min="0" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
-<div>Name:</div><input type="text" id="ename" name="ename" style="width:99%"/>
-</td></tr><tr><td><div class="inline-no">Memo: <textarea rows="5" type="text" id="ememo" name="ememo" style="width:99%" ></textarea></div>
-</td></tr><tr><td>
-<input type="button" onclick="delEvent()" value="Del"/>
-<input type="button" onclick="newEvent()" value="New"/>
-<input type="button" onclick="addEvent()" value="Add"/>
-<input type="button" onclick="saveEvent()" value="Save"/>
-</td></tr>
-</table>
-</form>
+<div class="controldiv">
 
-<form id="exportForm">
-<table border=1 style="width:100%"><tr>
-<td>
-<input type="button" onclick="exportData()" value="Export"/>
-Import: <input type="file" id="files" name="files[]" />
-<button type="reset" value="Reset">Reset</button>
-</td>
-</tr>
-</table>
-</form>
+    <div id="opstatus">Ok</div>
 
-<form id="searchForm" onsubmit="showEvents(db); return false;">
-<table border=0 style="width:100%"><tr>
-<td>
-<input type="submit" value="Log">
-<input type="button" onclick="searchFormReset()" value="Reset"/>
-</td></tr><tr><td>
-<div class="inline">From date: <input type="date" id="fromdate" name="fromdate" /></div>
-<div class="inline">To date: <input type="date" id="todate" name="todate" /></div>
-<div>Name:</div><input type="text" id="fename" name="fename" style="width:99%"/>
-</td></tr><tr><td>
-<div class="inline">Limit: <input type="text" id="elimit" name="elimit" value="30" size="4" min="5" maxlength="3" onchange="document.getElementById('eoffset').step=this.value;" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
-<div class="inline">Offset: <input id="eoffset" name="eoffset" value="0" step="30" type="number" min="0" maxlength="40" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
-</td></tr>
-</table>
-</form>
+    <div class="tab">
+      <button class="tablinks" onclick="openTab(event, 'Find')" id="defaultOpen">Find</button>
+      <button class="tablinks" onclick="openTab(event, 'Edit')" id="buttonEdit">Edit</button>
+      <button class="tablinks" onclick="openTab(event, 'Import')">Import</button>
+      <button class="tablinks" onclick="openTab(event, 'Errors')">Errors</button>
+    </div>
 </div>
 
-<table id="eventListTable" border="1" width="99%" style="margin-top: .5em;" >
+
+<div class="controlleddiv">
+
+    <div id="Edit" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <form id="editForm">
+            <table border=0 style="width:100%">
+            <tr><td>
+            <input type="text" readonly="true" id="eidprefix" name="eidprefix"/>
+            </td></tr><tr><td>
+            <input type="text" readonly="true" id="eid" name="eid"/>
+            <div class="inline">Date: <input type="date" id="edate" name="edate" /></div>
+            <div class="inline">Length: <input type="text" id="elen" name="elen" value="1" type="number" size="4" min="0" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+            <div>Name:</div><input type="text" id="ename" name="ename" style="width:100%"/>
+            </td></tr><tr><td><div class="inline-no">Memo: <textarea rows="5" type="text" id="ememo" name="ememo" style="width:100%" ></textarea></div>
+            </td></tr><tr><td>
+            <input type="button" onclick="delEvent()" value="Del"/>
+            <input type="button" onclick="newEvent()" value="New"/>
+            <input type="button" onclick="addEvent()" value="Add"/>
+            <input type="button" onclick="saveEvent()" value="Save"/>
+            </td></tr>
+            </table>
+            </form>
+        </div>
+    </div>
+
+    <div id="Import" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <input type="button" onclick="exportData()" value="Export"/>
+            <form id="exportForm">
+            <table style="width:100%"><tr>
+            <td>
+            <button type="reset" value="Reset" class="Reset">Reset</button>
+            Import: <input type="file" id="files" name="files[]" />
+            </td>
+            </tr>
+            </table>
+            </form>
+        </div>
+    </div>
+
+    <div id="Find" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <form id="searchForm" onsubmit="showEvents(db); return false;">
+            <table border=0 style="width:100%"><tr>
+            <td>
+            <input type="submit" value="Log">
+            <input type="button" onclick="searchFormReset()" value="Reset"/>
+            </td></tr><tr><td>
+            <div class="inline">From date: <input type="date" id="fromdate" name="fromdate" /></div>
+            <div class="inline">To date: <input type="date" id="todate" name="todate" /></div>
+            <div>Name:</div><input type="text" id="fename" name="fename" style="width:100%"/>
+            </td></tr><tr><td>
+            <div class="inline">Limit: <input type="text" id="elimit" name="elimit" value="30" size="4" min="5" maxlength="3" onchange="document.getElementById('eoffset').step=this.value;" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+            <div class="inline">Offset: <input id="eoffset" name="eoffset" value="0" step="30" type="number" min="0" maxlength="40" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+            </td></tr>
+            </table>
+            </form>
+        </div>
+    </div>
+
+    <div id="Errors" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <span onclick="document.getElementById('errorDiv').innerHTML='<p>'" class="topright">&empty;&nbsp;</span>
+        <div class="tcontent">
+        <div id="errorDiv">Ok</div>
+        </div>
+    </div>
+    
+<table id="eventListTable" width="100%" style="margin-top: .5em;" >
 </table>
+
+</div>
 
 <script>
 newEvent();
@@ -399,6 +606,8 @@ function fillTable(results_rows) {
     for (var i = 0; i < len; i++) {
         row = table.insertRow(trow++);
         if (i == 0) {
+            row.classList.add("rowbg");
+
             var j = 0;
             for (var p in columnNames) {
                 var cell = row.insertCell(j);
@@ -407,10 +616,11 @@ function fillTable(results_rows) {
                 //element.setAttribute("id", wid);
                 cell.appendChild(element);
                 //TODO escape
-                element.innerHTML = escapeHTML(p);
+                element.innerHTML = UTIL.escapeHTML(p);
             }
             row = table.insertRow(trow++);
         }
+        row.classList.add("rowbgl");
         var j = 0;
         for (var p in columnNames) {
             var cell = row.insertCell(j);
@@ -420,7 +630,7 @@ function fillTable(results_rows) {
             cell.appendChild(element);
             //TODO escape
             var rowIt = rowItem(results_rows,i);
-            element.innerHTML = escapeHTML(rowIt[p]);
+            element.innerHTML = UTIL.escapeHTML(rowIt[p]);
             if (p == "id") {
                 cell.setAttribute("onclick", "editEvent("+JSON.stringify(rowIt)+")");
             }
@@ -555,6 +765,7 @@ function getPrefix(db) {
         );
     });
 }    
+showEvents(db);
 </script>
 </body>
 </html>
