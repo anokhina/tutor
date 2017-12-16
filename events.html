@@ -34,7 +34,7 @@ html, body {
 <script>
 function toObject(arr) {
     var ret = {};
-    for (let i = 0; i < arr.length; ++i) {
+    for (var i = 0; i < arr.length; ++i) {
         ret[i] = arr[i];
     }
     ret.length = arr.length;
@@ -161,7 +161,7 @@ function searchFormReset() {
 function saveObj2FS(obj, filePrefix) {
     console.log(obj, JSON.stringify( obj, null, 2 ));
     var text = JSON.stringify( obj, null, 2 );
-    let obj1 = JSON.parse(text);
+    var obj1 = JSON.parse(text);
     obj1.length = obj.length;
     text = JSON.stringify( obj1, null, 2 );
     
@@ -393,17 +393,17 @@ function fillTable(results_rows) {
     }
 
     //ename, ememo, id, elen, pdate, edate, dlen
-    let columnNames = {id: "", edate: "", dlen: "", ename: "", elen: "", ememo: ""};
-    let trow = 0;
-    let row;
-    for (let i = 0; i < len; i++) {
+    var columnNames = {id: "", edate: "", dlen: "", ename: "", elen: "", ememo: ""};
+    var trow = 0;
+    var row;
+    for (var i = 0; i < len; i++) {
         row = table.insertRow(trow++);
         if (i == 0) {
-            let j = 0;
-            for (let p in columnNames) {
-                let cell = row.insertCell(j);
+            var j = 0;
+            for (var p in columnNames) {
+                var cell = row.insertCell(j);
                 j++;
-                let element = document.createElement("div");
+                var element = document.createElement("div");
                 //element.setAttribute("id", wid);
                 cell.appendChild(element);
                 //TODO escape
@@ -411,11 +411,11 @@ function fillTable(results_rows) {
             }
             row = table.insertRow(trow++);
         }
-        let j = 0;
-        for (let p in columnNames) {
-            let cell = row.insertCell(j);
+        var j = 0;
+        for (var p in columnNames) {
+            var cell = row.insertCell(j);
             j++;
-            let element = document.createElement("div");
+            var element = document.createElement("div");
             //element.setAttribute("id", wid);
             cell.appendChild(element);
             //TODO escape
@@ -508,10 +508,10 @@ function showTable(db, table) {
         tx.executeSql('SELECT ROWID, * FROM ' + table, [], 
             function (tx, results) {
                 var len = results.rows.length;
-                let msg = "<p>Found rows: " + len + "</p>";
+                var msg = "<p>Found rows: " + len + "</p>";
                 console.log(msg);
         
-                for (let i = 0; i < len; i++) {
+                for (var i = 0; i < len; i++) {
                     console.log(i, results.rows.item(i));
                 }
             },
@@ -527,7 +527,7 @@ function getPrefix(db) {
             function (tx, results) {
                 var len = results.rows.length;
                 if (len > 0) {
-                    for (let i = 0; i < len; i++) {
+                    for (var i = 0; i < len; i++) {
                         __idprefix = results.rows.item(i)["name"];
                     }
                 } else {
