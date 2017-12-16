@@ -19,6 +19,10 @@ limitations under the License.
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style type="text/css">
+body {
+    margin: 0px;
+    padding: 0px;
+}
  .control, .control input {
      font-size: small;
  }
@@ -56,15 +60,74 @@ limitations under the License.
     margin-right: 6px;
     white-space: pre;
 }
+#allRate {
+    padding: 3px;
+    font-size: small;
+}
+div.tab {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #e5e5e5;
+}
+div.div, div.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    transition: 0.3s;
+    font-size: large;
+    max-height: 28px;
+}
+div.tab button {
+    background-color: #bbb;
+}
+div.tab button.active {
+    background-color: #ccc;
+}
+div.tab button.active {
+    background-color: #ccc;
+}
+.tabcontent {
+    width: 100%;
+    display: none;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-top: none;
+    background-color: #f1f1f1;
+    z-index: 200;
+    position: absolute;
+}
+
   </style>
 
 <body class="noselect">
 
 <script>
+if (window.NodeList && !NodeList.prototype.forEach) {
+    NodeList.prototype.forEach = function (callback, thisArg) {
+        thisArg = thisArg || window;
+        for (var i = 0; i < this.length; i++) {
+            callback.call(thisArg, this[i], i, this);
+        }
+    };
+}
+if (typeof String.prototype.startsWith != 'function') {
+    String.prototype.startsWith = function (str){
+        return this.indexOf(str) === 0;
+    };
+}
+
 function makeUtterance(lang, rate) {
-    var ret = new SpeechSynthesisUtterance();
-    ret.lang = lang;
-    ret.rate = rate;
+    var ret = null;
+    try {
+        ret = new SpeechSynthesisUtterance();
+        ret.lang = lang;
+        ret.rate = rate;
+    } catch (e) {
+        console.log(e);
+    }
     return ret;
 }
 
@@ -81,8 +144,7 @@ var idPrefixLength = 3;
 var currentSettings = null;
 var startAgain = false;
 
-function saveAs(data, filename) {
-    var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
+function saveAs(blob, filename) {
     if (window.navigator.msSaveOrOpenBlob) {
         window.navigator.msSaveBlob(blob, filename);
     } else {
@@ -154,7 +216,7 @@ function loadSettings(cfg) {
             wordrate = {};
         }
 
-        let words = cfg.words.sort(function(a, b){
+        var words = cfg.words.sort(function(a, b){
             var awr = 0;
             var bwr = 0;
             if (a.id in wordrate) {
@@ -188,11 +250,11 @@ function wordClicked(p) {
 //////        
             lastClicked.obj.classList.remove("lastClicked");
             var lc = lastClicked.obj;
-            let w1id = p.id.substring(idPrefixLength);
-            let w2id = lc.id.substring(idPrefixLength);
+            var w1id = p.id.substring(idPrefixLength);
+            var w2id = lc.id.substring(idPrefixLength);
             if(lc === p) {
                 lastClicked.cnt = lastClicked.cnt + 1;
-                let lccnt = lastClicked.cnt;
+                var lccnt = lastClicked.cnt;
 
                 if (lccnt > 2) {
                     var showwords = document.querySelectorAll(".id" + w2id);
@@ -226,11 +288,11 @@ function wordClicked(p) {
 
             if (p.lang != lc.lang) {
                 if (w1id === w2id) {
-                    let variants = document.querySelectorAll(".id" + w2id);
+                    var variants = document.querySelectorAll(".id" + w2id);
                     console.log(w2id, variants);
-                    let nextLastClicked = null;
-                    let findVariant = true;
-                    let remove2 = [];
+                    var nextLastClicked = null;
+                    var findVariant = true;
+                    var remove2 = [];
                     
                     if (variants.length > 2) {
                         findVariant = false;
@@ -312,7 +374,7 @@ function getIdPrefix(prefix) {
 }
 var praise = [ "&#9973;", "&#9951;", "&#9924;", "&#9972;", "&#x263a;", "&#x2708;", "&#x2655;", "&#x1F600;", "&#x1F602;", "&#x1F60A;", "&#x1F60D;", "&#x1F638;", "&#x1F639;", "&#x1F63A;", "&#x1F63B;", "&#x1F64B;", "&#x1F64C;"];
 function hidePrise() {
-    let p = document.getElementById("prise");
+    var p = document.getElementById("prise");
     if (p) {
         p.classList.add("hide");
     }
@@ -417,7 +479,7 @@ function moveDiv(element, pnt) {
         element.style.top = pnt.y;
     } else {
         var rect = getRect(element);
-        let xw = xWordWidth;
+        var xw = xWordWidth;
         if (window.innerWidth < 481 || window.innerHeight < 481) {
             xw = 50;
         }        
@@ -444,11 +506,12 @@ function startGame(startCurrent) {
 function clearWords() {
     wordsid = [];
     wordrate = {};
-    document.querySelectorAll(".lword").forEach(function(e){
+    var nodeList = document.querySelectorAll(".lword");
+    nodeList.forEach(function(e){
         document.body.removeChild(e);
     });
 
-    let p = document.getElementById("controls");
+    var p = document.getElementById("controls");
     yWordOffset = p.offsetHeight + p.offsetTop;
     //console.log("????????????", yWordOffset);
 }
@@ -456,9 +519,9 @@ function loadWors(text, splitter) {
 // <lang1></lang2><lang2></lang2>
     startAgain = false;
     hidePrise();
-    let otherDelimeter = false;
-    let sidx1 = text.indexOf("<delimeter>");
-    let sidx2 = text.indexOf("</delimeter>");
+    var otherDelimeter = false;
+    var sidx1 = text.indexOf("<delimeter>");
+    var sidx2 = text.indexOf("</delimeter>");
     if (sidx1>=0 && sidx2>=0 && sidx1<sidx2) {
         otherDelimeter = true;
         splitter=text.substring(sidx1 + "<delimeter>".length, sidx2);
@@ -466,28 +529,28 @@ function loadWors(text, splitter) {
     }
     clearWords();
 
-    let wordDivs = [];
-    let words = [];
-    let other = [];
+    var wordDivs = [];
+    var words = [];
+    var other = [];
     if (text.indexOf("|") < 0) {
         otherDelimeter = true;
     }
 
     if (otherDelimeter) {
-        let wordsTemp = text.split(splitter);
-        for (let k = 0; k+1 < wordsTemp.length; k+=2) {
-            let eId = k/2 + 1;
+        var wordsTemp = text.split(splitter);
+        for (var k = 0; k+1 < wordsTemp.length; k+=2) {
+            var eId = k/2 + 1;
             words.push({ en: wordsTemp[k].trim(), ru : wordsTemp[k+1].trim(), id : eId});
         }
     } else {
-        let wordsTemp1 = text.split("|");
-        let eId = 1;
+        var wordsTemp1 = text.split("|");
+        var eId = 1;
         wordsTemp1.forEach(function(e) {
-            let wordsTemp = e.split(splitter);
+            var wordsTemp = e.split(splitter);
             if (wordsTemp.length > 1) {
-                let w = { en: wordsTemp[0].trim(), ru: wordsTemp[1].trim() , id : eId};
+                var w = { en: wordsTemp[0].trim(), ru: wordsTemp[1].trim() , id : eId};
                 eId++;
-                for(let j = 2; j < wordsTemp.length; j++) {
+                for(var j = 2; j < wordsTemp.length; j++) {
                     w[("ru"+(j-1))] = wordsTemp[j].trim();
                 }
                 words.push(w);
@@ -517,8 +580,8 @@ function addWord(e, wordDivs, wordsid, other, arr, idx, callback) {
         eww.push(document.createElement("div"));
         eww.push(document.createElement("div"));
         
-        for (let m = 1; m < 10; m++) {
-            let k = "ru" + m;
+        for (var m = 1; m < 10; m++) {
+            var k = "ru" + m;
             if (k in e) {
                 eww.push(document.createElement("div"));
             } else {
@@ -569,8 +632,8 @@ function countRates() {
     var allRate = 0,
         minRate,
         maxRate;
-    let j = 0;
-    for (let i in wordrate) {
+    var j = 0;
+    for (var i in wordrate) {
         if (minRate === undefined) {
             minRate = wordrate[i];
         } else {
@@ -587,7 +650,7 @@ function countRates() {
     if (j != 0) {
         allRate = allRate / j;
     }
-    document.getElementById('allRate').innerHTML = "Rate:" + allRate + ", Max:" + maxRate + ", Min:" + minRate;
+    document.getElementById('allRate').innerHTML = "Rate:" + allRate.toFixed(3) + ", Max:" + ((maxRate === undefined) ? "" : maxRate) + ", Min:" + ((minRate === undefined) ? "" : minRate);
 }
 function nextWord(e, wordDivs, wordsid, other, arr, idx, callback) {
     if (idx < arr.length) {
@@ -617,7 +680,7 @@ function nextWord(e, wordDivs, wordsid, other, arr, idx, callback) {
 
 function printWords(e, eww, idx, onAdd) {
     if (idx < eww.length) {
-        let pfix = "";
+        var pfix = "";
         if (idx > 1) {
             pfix = "" + (idx - 1);
         }
@@ -630,8 +693,8 @@ function printWords(e, eww, idx, onAdd) {
 }
 
 function tryToPlace(wordDivs, ew) {
-    let j = 1;
-    let isover = hasOverlap(wordDivs, ew);
+    var j = 1;
+    var isover = hasOverlap(wordDivs, ew);
     while(isover && j < 100) {
         moveDiv(ew);
         isover = hasOverlap(wordDivs, ew);
@@ -644,25 +707,59 @@ function tryToPlace(wordDivs, ew) {
 }
 
 function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) {
+    for (var i = a.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [a[i], a[j]] = [a[j], a[i]];
     }
 }
+
+function openTab(evt, tabName) {
+    var i, tabcontent, show = true, newActive = document.getElementById(tabName);
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        if (tabcontent[i] == newActive && tabcontent[i].style.display == "block") {
+            show = false;
+        }
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    
+    if (show) {
+        newActive.style.display = "block";
+        if (evt) {
+            evt.currentTarget.className += " active";
+        }
+    }
+    window.scrollTo(0, 0);
+}
+
 </script>
 
-<div id="controls" class="control">
-<form class="inline" style="border: double;">
-<input type="file" id="files" name="files[]" />
-<button type="reset" value="Reset">x</button>
-</form>
-<div class="inline" id="allRate">Rate:</div>
-<br>
-<div class="inline">User: <input type="text" id="uname" name="uname" size="10"/></div>
-<div class="inline">Theme: <input type="text" id="theme" name="theme" size="12" /></div>
-<input type="button" onclick="saveSettings()" value="Save"/>
-<input type="button" onclick="startGame(true)" value="Start"/>
+<div class="controldiv">
+    <div class="tab">
+        <button id="buttonInfo" class="tablinks" onclick="openTab(event, 'Info')" >&equiv;</button>
+        <button class="tablinks" onclick="startGame(true)">&#8883;</button>
+        <div id="allRate" class="tablinks inline">&nbsp;Rate:</div>
+    </div>
 </div>
+
+
+<div id="controls" class="control">
+</div>
+    <div id="Info" class="tabcontent">
+            <form class="inline" >
+            <button type="reset" value="Reset">x</button>
+            <input type="file" id="files" name="files[]" />
+            </form>
+        <div class="tcontent">
+            <div class="inline">User: <input type="text" id="uname" name="uname" size="10"/></div>
+            <div class="inline">Theme: <input type="text" id="theme" name="theme" size="12" /></div>
+            <button class="tablinks" onclick="saveSettings()">Save</button>
+        </div>
+    </div>
 
 <script>
     function handleFileSelect(evt) {
@@ -686,6 +783,7 @@ function shuffle(a) {
             reader.readAsText (f);
             reader.onload = function(e) {
                 var text = reader.result;
+                openTab({ currentTarget: document.getElementById("buttonInfo") }, "Info");
                 try {
                     var cfg = JSON.parse(text);
                     loadSettings(cfg);
