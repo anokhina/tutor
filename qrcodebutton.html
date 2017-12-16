@@ -30,8 +30,8 @@ var QRCode;!function(){function t(t){this.mode=h.MODE_8BIT_BYTE,this.data=t,this
 <body>
 
 <div id="controls" class="control" >
-URL: <br><center><textarea rows="5" id="uname" name="uname" ></textarea></center>
 <input type="button" onclick="gencode()" value="Generate"/>
+URL: <br><center><textarea rows="5" id="uname" name="uname" style="margin-top: 5px;" ></textarea></center>
 </div>
 
 <center>
@@ -40,6 +40,9 @@ URL: <br><center><textarea rows="5" id="uname" name="uname" ></textarea></center
 <script type="text/javascript">
 
 var wh = Math.min(window.innerWidth, window.innerHeight) - 20;
+if(wh < 200) {
+    wh = 200;
+}
 wh = Math.min(wh, 300);
 document.getElementById("uname").value = wh;
 var qrcode = new QRCode(document.getElementById("qrcode"), {
@@ -59,7 +62,8 @@ function _getUTF8Length(sText) {
 function gencode() {
     qrcode.clear();
     qrcode.makeCode("");
-    let s = document.getElementById("uname").value;
+    var uname = document.getElementById("uname");
+    var s = uname.value;
     //console.log("------------",s.length);
     try {
         qrcode.makeCode(s);
