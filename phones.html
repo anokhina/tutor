@@ -26,7 +26,7 @@ https://tools.ietf.org/html/rfc6350
   <style type="text/css">
 html, body {
     /*height:99%;*/
-    width:99%;
+    width:100%;
 }   
 body {
     margin: 0px;
@@ -56,8 +56,14 @@ body {
 table {
     border: none;
 }
+input {
+    padding: 0px;
+    margin: 0px;
+}
 textarea { 
     resize:vertical; 
+    padding: 0px;
+    margin: 0px;    
 }
 /* Style the tab */
 div.tab {
@@ -97,6 +103,9 @@ div.tab button.active {
     background-color: #f1f1f1;
 }
 
+.tcontent {
+}
+
 /* Style the close button */
 .topright {
     float: right;
@@ -110,11 +119,90 @@ div.tab button.active {
 #opstatus {
     background-color: #bbb;
 }
+
+.controldiv {
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 200;
+}
+.controlleddiv {
+    position: relative;
+    top: 50px;
+}
+
   </style>
 
 <body>
 
 <script>
+var UTIL = (function(e) {
+    var self = {
+    };
+    
+    self.toObject = function (arr) {
+        var ret = {};
+        for (let i = 0; i < arr.length; ++i) {
+            ret[i] = arr[i];
+        }
+        ret.length = arr.length;
+        return ret;
+    };
+    
+    self.namespace = function(ns) {
+        var o = this, ts = ns.split("."), t;
+        while (ts.length > 0) {
+            t = ts.shift();
+            if (typeof o[t] === "undefined") { o[t] = {};}
+            o = o[t];
+        }
+
+        return o;
+    };
+    
+    var __escape = document.createElement('textarea');
+    self.escapeHTML = function(html) {
+        __escape.textContent = html;
+        return __escape.innerHTML;
+    }
+
+    self.unescapeHTML = function (html) {
+        __escape.innerHTML = html;
+        return __escape.textContent;
+    }
+    
+    self.parseDate = function (str) {
+        if (str) {
+            str = str.trim();
+            var d = new Date(str + " UTC"), ds;
+            if(/^(\d){8}$/.test(str)) {
+                var yy = str.substr(0,4),
+                    mm = str.substr(4,2) - 1,
+                    dd = str.substr(6,2);
+                d = new Date(Date.UTC(yy,mm,dd));
+            }
+            try {
+                return d.toISOString().slice(0,10);
+            } catch (e) {
+            }
+        }
+        return null;
+    }
+    
+    self.tokenize = function (s, esc, sep) {
+        for (var a=[], t='', i=0, e=s.length; i<e; i++) {
+            var c = s.charAt(i);
+            if (c == esc) { t+=s.charAt(++i); }
+            else if (c != sep) { t+=c }
+            else { a.push(t); t=''; }
+        }
+        a.push(t);
+        return a;
+    }    
+    
+    return self;
+})();
+
 var CONST_VCARD_N = "N"; 
 //is a concatenation of the Family Name (first field), 
 //Given Name (second field), 
@@ -135,20 +223,15 @@ var CONST_VCARD_NOTE = "NOTE";
 var CONST_VCARD_ANNIVERSARY = "X-ANNIVERSARY";
 var CONST_VCARD_EMAIL = "EMAIL"; //EMAIL;INTERNET:
 var CONST_VCARD_ADR = "ADR";
-/*
-;;;Санкт-Петербург;;;RU
-to the post office box;
-the extended address;
-the street address; 
-the locality (e.g., city); 
-the region (e.g., state or province); 
-the postal code; 
-the country name. 
-
-When a component value
-   is missing, the associated component separator MUST still be
-   specified.
-*/
+var ADDR_PARTS = [
+"Post office box"
+,"Extended"
+,"Street"
+,"City"
+,"Region/State"
+,"Postal code"
+,"Country"
+];
 var CONST_VCARD_URL = "URL";
 var CONST_VCARD_ORG = "ORG";
 var CONST_VCARD_PARAM = {}; 
@@ -208,14 +291,6 @@ CONST_VCARD_PARAM[CONST_VCARD_ADR] = true;
 CONST_VCARD_PARAM[CONST_VCARD_URL] = true;
 CONST_VCARD_PARAM[CONST_VCARD_ORG] = true;
 
-function toObject(arr) {
-    var ret = {};
-    for (let i = 0; i < arr.length; ++i) {
-        ret[i] = arr[i];
-    }
-    ret.length = arr.length;
-    return ret;
-}
 function saveAs(data, filename) {
     var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
     if (window.navigator.msSaveOrOpenBlob) {
@@ -245,16 +320,6 @@ function saveObj2FS(obj, filePrefix) {
     }
     saveAs(blob, filePrefix+filenameUname+todayDate+".json");
 }
-var __escape = document.createElement('textarea');
-function escapeHTML(html) {
-    __escape.textContent = html;
-    return __escape.innerHTML;
-}
-
-function unescapeHTML(html) {
-    __escape.innerHTML = html;
-    return __escape.textContent;
-}
 function openTab(evt, tabName) {
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tabcontent");
@@ -269,14 +334,15 @@ function openTab(evt, tabName) {
     if (evt) {
         evt.currentTarget.className += " active";
     }
+    window.scrollTo(0, 0);
 }
 function showStatus(m, o, exc) {
     var now = new Date().toISOString().slice(0,19).replace("T", " ");
     if (!o) {
         o = m;
     }
-    var msg = now + ": " + escapeHTML(o);
-    var msgSh = now + ": " + escapeHTML(m);
+    var msg = now + ": " + UTIL.escapeHTML(o);
+    var msgSh = now + ": " + UTIL.escapeHTML(m);
     var statDiv = document.getElementById('opstatus');
     if (statDiv) {
         statDiv.innerHTML = msgSh;
@@ -327,7 +393,7 @@ function importData(text) {
     }
     console.log("------0----", exists.length);
     if (exists.length > 0) {
-        saveObj2FS(toObject(exists), "importErrorExists");
+        saveObj2FS(UTIL.toObject(exists), "importErrorExists");
     }
 }
 function importVCard(text, exists, callback) {
@@ -392,9 +458,24 @@ function importVCard(text, exists, callback) {
             if (newk) {
                 let newkval =prompt("value for " + newk, robj[k]);
                 obj[newk] = newkval;
+                k = newk;
             } else if (!confirm("Continue?")) {
                 //TODO
                 break;
+            }
+        }
+        if (k == CONST_VCARD_BDAY || k == CONST_VCARD_ANNIVERSARY) {
+            var ds = UTIL.parseDate(obj[k]);
+            var j = 0;
+            while(!ds && j < 5) {
+                ds = UTIL.parseDate(prompt("wrong value for " + k + " The date to be in YYYY-mm-dd", obj[k]));
+                j++;
+            }
+            if (ds) {
+                obj[k] = ds;
+            } else {
+                showStatus("The import was interrupted because of wrong data");
+                return;
             }
         }
     }
@@ -430,70 +511,104 @@ function fromEncoded(str) {
     return utf8decoder.decode(new Uint8Array(intArr));
 }
 </script>
-<div id="opstatus">Ok</div>
+<div class="controldiv">
 
-<div class="tab">
-  <button class="tablinks" onclick="openTab(event, 'Find')" id="defaultOpen">Find</button>
-  <button class="tablinks" onclick="openTab(event, 'Edit')">Edit</button>
-  <button class="tablinks" onclick="openTab(event, 'Import')">Import</button>
-  <button class="tablinks" onclick="openTab(event, 'Errors')">Errors</button>
+    <div id="opstatus">Ok</div>
+
+    <div class="tab">
+      <button class="tablinks" onclick="openTab(event, 'Find')" id="defaultOpen">Find</button>
+      <button class="tablinks" onclick="openTab(event, 'Edit')">Edit</button>
+      <button class="tablinks" onclick="openTab(event, 'Import')">Import</button>
+      <button class="tablinks" onclick="openTab(event, 'Errors')">Errors</button>
+    </div>
 </div>
+<div class="controlleddiv">
+    <div id="Find" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+        <form id="searchForm" onsubmit="showPhones(db, 2); return false;">
+            <table border=0 style="width:100%">
+                <tr>
+                    <td>
+                        <input type="submit" value="Log">
+                        <!--input type="button" onclick="showPhones(db, 2);" value="Count"/-->
+                        <button type="reset" value="Reset" style="float: right;">Reset</button>
+                        <div id="countDiv" class="inline" style="padding-left:5px;"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <table border=0 style="width:100%">
+                            <tr><td style="width:1%">Property:</td><td><input type="text" id="feprop" name="feprop" style="width:99%" value="adr%"/></td></tr>
+                            <tr><td style="width:1%">Name:</td><td><input type="text" id="fename" name="fename" style="width:99%" value="%"/></td></tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="button" onclick="if(parseInt(document.getElementById('eoffset').value) >= parseInt(document.getElementById('elimit').value)) { document.getElementById('eoffset').value= parseInt(document.getElementById('eoffset').value) - parseInt(document.getElementById('elimit').value);showPhones(db, 2);}" value="&lt;Prev"/>
+                        <div class="inline"><div class="inline" style="font-size:small">Limit:</div><input type="text"   id="elimit"  name="elimit"  value="30"          size="4" min="5"  maxlength="3" onchange="document.getElementById('eoffset').step=this.value;" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+                        <div class="inline"><div class="inline" style="font-size:small">Offset:</div><input type="number" id="eoffset" name="eoffset" value="0" step="30" size="6" min="0" maxlength="8"                                                                oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
+                        <input type="button" onclick="document.getElementById('eoffset').value = parseInt(document.getElementById('eoffset').value) + parseInt(document.getElementById('elimit').value) ;showPhones(db, 2);" value="Next>"/>
+                    </td>
+                </tr>
+            </table>
+        </form>
+        </div>
+    </div>
 
-<div id="Find" class="tabcontent">
-  <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
-<form id="searchForm" onsubmit="showPhones(db); return false;">
-<table border=0 style="width:100%"><tr>
-<td>
-<input type="submit" value="Log">
-<input type="button" onclick="showPhones(db, 2);" value="Count"/>
-<button type="reset" value="Reset" style="float: right;">Reset</button>
-<div id="countDiv" class="inline" style="padding-left:5px;"></div>
-</td></tr><tr><td>
-<table border=0 style="width:100%">
-<tr><td style="width:1%">Property:</td><td><input type="text" id="feprop" name="feprop" style="width:99%"/></td></tr>
-<tr><td style="width:1%">Name:</td><td><input type="text" id="fename" name="fename" style="width:99%"/></td></tr>
-</table>
-</td></tr><tr><td>
-<div class="inline"><div class="inline" style="font-size:small">Limit:</div><input type="text"   id="elimit"  name="elimit"  value="30"          size="4" min="5"  maxlength="3" onchange="document.getElementById('eoffset').step=this.value;" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
-<div class="inline"><div class="inline" style="font-size:small">Offset:</div><input type="number" id="eoffset" name="eoffset" value="0" step="30" size="6" min="0" maxlength="8"                                                                oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
-</td></tr>
-</table>
-</form>
-</div>
+    <div id="Edit" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <form>
+            <input type="button" onclick="savePhone()" value="Save"/>
+            <input type="button" id="phoneEditorTableReset" value="Reset"/>
+            <input type="button" onclick='addPhoneProperty(CONST_VCARD_BDAY, "", true);' value="BDAY"/>
+            <input type="button" onclick='addPhoneProperty(CONST_VCARD_ANNIVERSARY, "");' value="X-ANNIVERSARY"/>
+            <input type="button" onclick='addPhoneProperty(CONST_VCARD_TEL, "");' value="TEL"/>
+            <input type="button" onclick='addPhoneProperty(CONST_VCARD_EMAIL, "", true);' value="EMAIL"/>
+            <input type="button" onclick='addPhoneProperty(CONST_VCARD_ADR, ";;;;;;");' value="ADR"/>
+            <input type="button" onclick='addPhoneProperty(CONST_VCARD_NOTE, "", true);' value="NOTE"/>
+            <input type="button" onclick='addPhoneProperty(CONST_VCARD_PHOTO, "", true);' value="PHOTO"/>
+            <table id="phoneEditorTable" width="100%" style="margin-top: .5em;" >
+            </table>
+            </form>
+        </div>
+        /////////////////////////////////
+    </div>
 
-<div id="Edit" class="tabcontent">
-  <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
-  
-<table id="phoneEditorTable" width="99%" style="margin-top: .5em;" >
-</table>
-  
-</div>
+    <div id="Import" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+        <form id="exportForm">
+            <table style="width:100%">
+                <tr>
+                    <td>
+                        Import: <input type="file" id="files" name="files[]" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <button type="reset" value="Reset">Reset</button>
+                        <input type="button" onclick="showTables()" value="Log"/>
+                    </td>
+                </tr>
+            </table>
+        </form>
+        </div>
+    </div>
 
-<div id="Import" class="tabcontent">
-  <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
-  <form id="exportForm">
-<table style="width:100%"><tr>
-<td>
-Import: <input type="file" id="files" name="files[]" />
-</td></tr>
-<tr><td>
-<button type="reset" value="Reset">Reset</button>
-<input type="button" onclick="showTables()" value="Log"/>
-</td>
-</tr>
-</table>
-</form>
-</div>
-
-<div id="Errors" class="tabcontent">
-  <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
-  <span onclick="document.getElementById('errorDiv').innerHTML='<p>'" class="topright">&empty;&nbsp;</span>
-  <div id="errorDiv">Ok</div>
-</div>
-
+    <div id="Errors" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <span onclick="document.getElementById('errorDiv').innerHTML='<p>'" class="topright">&empty;&nbsp;</span>
+        <div class="tcontent">
+        <div id="errorDiv">Ok</div>
+        </div>
+    </div>
 
 <table id="phoneListTable" width="100%" style="margin-top: .5em;" >
 </table>
+<div>
 
 <script>
 function rowItem (results_rows, i) {
@@ -611,7 +726,23 @@ function fillList(results_rows) {
     console.log(ret);
     return ret;
 }
+function addPhoneProperty(propName, defVal, ifNotExist) {
+    if (editPhoneObj) {
+        if (propName in editPhoneObj.props) {} else {
+            editPhoneObj.props[propName] = [];
+        }
+        editPhoneObj.props[propName].push({id: null, prop:propName, pval:defVal});
+        _editPhone(editPhoneObj);
+    }
+}
+var editPhoneObj;
 function editPhone(rowIt) {
+    document.getElementById("phoneEditorTableReset").setAttribute("onclick", "editPhone("+JSON.stringify(rowIt)+");")
+    _editPhone(rowIt);
+}
+function _editPhone(rowIt) {
+    editPhoneObj = rowIt;
+    
     console.log(rowIt);
     //phoneEditorTable
     var table = document.getElementById("phoneEditorTable");
@@ -631,7 +762,7 @@ function editPhone(rowIt) {
             element.classList.add("inline");
             //element.setAttribute("id", wid);
             cell.appendChild(element);
-            element.innerHTML = escapeHTML("id");
+            element.innerHTML = UTIL.escapeHTML("id");
             cell.style.width = "1%";
         }
         {
@@ -642,7 +773,7 @@ function editPhone(rowIt) {
             element.classList.add("inline");
             //element.setAttribute("id", wid);
             cell.appendChild(element);
-            element.innerHTML = escapeHTML("name");
+            element.innerHTML = UTIL.escapeHTML("name");
         }
     }
         row = table.insertRow(trow++);
@@ -655,7 +786,7 @@ function editPhone(rowIt) {
             element.classList.add("inline");
             //element.setAttribute("id", wid);
             cell.appendChild(element);
-            element.innerHTML = escapeHTML(rowIt["cardid"]);
+            element.innerHTML = UTIL.escapeHTML(rowIt["cardid"]);
             
             element = document.createElement("input");
             element.setAttribute('type', 'button');
@@ -677,12 +808,14 @@ function editPhone(rowIt) {
             cell.appendChild(element);
             element.value = rowIt["name"];
             element.style.width = "100%";
+            var rowItNameElement = element;
         }
         
         for (var pr in rowIt.props) {
             
             for (var k = 0; k < rowIt.props[pr].length; k++) {
                 var elm = rowIt.props[pr][k];
+                if (elm["_delete"]) continue;
                 if (elm["prop"].startsWith("PHOTO")) {
                     {
                         var img = document.createElement("img");
@@ -691,6 +824,7 @@ function editPhone(rowIt) {
                         //nameCell.appendChild(img);
                         nameCell.insertBefore(img, nameCell.firstChild);
                         img.classList.add("photo");
+                        //load file
                     }
                 } else {
                     row = table.insertRow(trow++);
@@ -755,20 +889,22 @@ function editPhone(rowIt) {
                                     checkbox.type = "checkbox";
                                     checkbox.name = "ch" + idLine;
                                     checkbox.value = e;
-                                    checkbox.onchange = function(e) {
-                                        if (e.target.checked) {
-                                            propParams[e.target.value] = 2;
-                                        } else {
-                                            propParams[e.target.value] = 0;
-                                        }
-                                        elem["prop"] = propName;
-                                        for (var ei in propParams) {
-                                            if (propParams[ei] > 0) {
-                                                elem["prop"] += (";" + ei);
+                                    (function(checkbox, propParams, propName, elem, rowIt){
+                                        checkbox.onchange = function(e) {
+                                            if (e.target.checked) {
+                                                propParams[e.target.value] = 2;
+                                            } else {
+                                                propParams[e.target.value] = 0;
                                             }
-                                        }
-                                        console.log(propParams, elem["prop"], rowIt);
-                                    };
+                                            elem["prop"] = propName;
+                                            for (var ei in propParams) {
+                                                if (propParams[ei] > 0) {
+                                                    elem["prop"] += (";" + ei);
+                                                }
+                                            }
+                                            console.log(propParams, elem["prop"], rowIt);
+                                        };
+                                    })(checkbox, propParams, propName, elem, rowIt);
                                     if (e in propParams && propParams[e]) {
                                         checkbox.checked = true; 
                                         propParams[e] = 2;
@@ -786,7 +922,7 @@ function editPhone(rowIt) {
                                 || elm["prop"] == "N5" 
                                 ) {
                             
-                                element.innerHTML = escapeHTML(elm[el]) + " " + PARAM_TYPE[elm[el]];
+                                element.innerHTML = UTIL.escapeHTML(elm[el]) + " " + PARAM_TYPE[elm[el]];
                             } else if (elm["prop"].startsWith(CONST_VCARD_TEL)) {
                                 multiSelect(CONST_VCARD_TEL, elm, PHONE_TYPE, rowIt);
                             } else if (elm["prop"].startsWith(CONST_VCARD_ADR)) {
@@ -794,7 +930,7 @@ function editPhone(rowIt) {
                             } else if (elm["prop"].startsWith(CONST_VCARD_EMAIL)) {
                                 multiSelect(CONST_VCARD_EMAIL, elm, PLACE_TYPE, rowIt);
                             } else {
-                                element.innerHTML = escapeHTML(elm[el]);
+                                element.innerHTML = UTIL.escapeHTML(elm[el]);
                             }
                         }
                         
@@ -805,32 +941,106 @@ function editPhone(rowIt) {
                         cell.colSpan = 1;
                         j++;
 
-                        var element;
-                        element = document.createElement("input");
-                        element.setAttribute('type', 'text');
-                        if (
-                            propName == "N1" 
-                            || propName == "N2" 
-                            || propName == "N3" 
-                            || propName == "N4" 
-                            || propName == "N5" 
-                            ) {
-                            //TODO onchange
-                        } else if (propName == CONST_VCARD_NOTE) {
+                        (function(element) {
+                            console.log(el, propName);
+                        if (propName == CONST_VCARD_NOTE) {
                             element = document.createElement("textarea");
-                        } else if (propName == CONST_VCARD_BDAY || propName == CONST_VCARD_ANNIVERSARY) {
-                            element.setAttribute('type', 'date');
+                            element.style.width = "100%";
+                            element.value = elm[el];
+                        } else if (propName == CONST_VCARD_ANNIVERSARY || propName == CONST_VCARD_BDAY) {
+                            element = document.createElement("input");
+                            element.setAttribute('type', 'text');
+                            var ds = UTIL.parseDate(elm[el]);
+                            if (ds) {
+                                element.setAttribute('type', 'date');
+                                element.value = ds;
+                            } else {
+                                if (!elm[el]) {
+                                    element.setAttribute('type', 'date');
+                                }
+                                element.value = elm[el];
+                            }
+                        } else if (propName.startsWith(CONST_VCARD_ADR)) {
+                            element = document.createElement("table");
+                            element.style.width = "100%";
+                            var addrtoken = UTIL.tokenize(elm[el], '\\', ';');
+                            for (var i = 0; i < ADDR_PARTS.length; i++) {
+                                var r = element.insertRow(i);
+                                var c = r.insertCell(0);
+                                c.classList.add("rowbgm");
+                                c.style.width = "1%";
+                                var elt = document.createElement("input");
+                                elt.setAttribute('type', 'text');
+                                if (i < addrtoken.length) {
+                                    elt.value = addrtoken[i]; 
+                                }
+                                
+                                c.appendChild(document.createTextNode(ADDR_PARTS[i]));
+                                c = r.insertCell(1);
+                                c.appendChild(elt);
+                                elt.style.width = "100%";
+                                (function(element, rowIt, pr, k, el, i) {
+                                    element.onchange = function(e) {
+                                        var addrtoken = UTIL.tokenize(rowIt.props[pr][k][el], '\\', ';');
+                                        var newval = "";
+                                        for(var ii = 0; ii < addrtoken.length; ii++) {
+                                            if (ii > 0) {
+                                                newval = newval + ";";
+                                            }
+                                            if (ii == i) {
+                                                newval = newval + element.value.replace(";", "\\;");
+                                            } else {
+                                                newval = newval + addrtoken[ii].replace(";", "\\;");
+                                            }
+                                        }
+                                        rowIt.props[pr][k][el] = newval;
+                                    };
+                                })(elt, rowIt, pr, k, el, i);
+                            }
+                            cell.appendChild(element);
+                            element.style.width = "100%";
+                            element = null;
                         } else if (propName == CONST_VCARD_PHOTO) { //TODO
+//////////////////////////////         
+               
+                        } else {
+                            element = document.createElement("input");
+                            element.setAttribute('type', 'text');
+                            element.value = elm[el];
+                            element.style.width = "100%";
                         }
-                        cell.appendChild(element);
-                        element.value = elm[el];
-                        element.style.width = "100%";
-                        
-                        var bpr = pr, bk = k, bel = el;
-                        element.onchange = function (e) {
-                            rowIt.props[bpr][bk][bel] = e.target.value;
-                            console.log(rowIt,bpr,bk,bel);
-                        };
+                        if (element) {
+                            cell.appendChild(element);
+                            
+                            (function(element, rowIt, bpr, bk, bel) {
+                                rowIt.props[bpr][bk]._bind = element;
+                                element.onchange = function (e) {
+                                    rowIt.props[bpr][bk][bel] = e.target.value;
+                                    if (
+                                        bpr == "N1" 
+                                        || bpr == "N2" 
+                                        || bpr == "N3" 
+                                        || bpr == "N4" 
+                                        || bpr == "N5" 
+                                    ) {
+                                        var n1 = rowIt.props["N1"][0][bel],
+                                            n2 = rowIt.props["N2"][0][bel],
+                                            n3 = rowIt.props["N3"][0][bel], 
+                                            n4 = rowIt.props["N4"][0][bel], 
+                                            n5 = rowIt.props["N5"][0][bel];
+                                            
+                                        rowIt.name = n1 + " " + n2 + " " + n3;
+                                        rowIt.props["FN"][0][bel] = n4 + " " + n1 + " " + n2 + " " + n3 + " " + n5;
+                                        rowIt.props["FN"][0]._bind.value = rowIt.props["FN"][0][bel];
+                                        
+                                        rowItNameElement.value = rowIt.name;
+                                        rowIt.props["FN"][0]._bind.value = rowIt.props["FN"][0][bel];
+                                    }
+                                    console.log(rowIt,bpr,bk,bel);
+                                };
+                            })(element, rowIt, pr, k, el);
+                        }
+                        })();
                     });
                 }
             }
@@ -863,7 +1073,7 @@ function fillTable(results_rows) {
             element.classList.add("inline");
             //element.setAttribute("id", wid);
             cell.appendChild(element);
-            element.innerHTML = escapeHTML("id");
+            element.innerHTML = UTIL.escapeHTML("id");
             cell.style.width = "1%";
         }
         {
@@ -874,7 +1084,7 @@ function fillTable(results_rows) {
             element.classList.add("inline");
             //element.setAttribute("id", wid);
             cell.appendChild(element);
-            element.innerHTML = escapeHTML("name");
+            element.innerHTML = UTIL.escapeHTML("name");
         }
     }
     for (var i = 0; i < len; i++) {
@@ -890,7 +1100,7 @@ function fillTable(results_rows) {
             element.classList.add("inline");
             //element.setAttribute("id", wid);
             cell.appendChild(element);
-            element.innerHTML = escapeHTML(rowIt["cardid"]);
+            element.innerHTML = UTIL.escapeHTML(rowIt["cardid"]);
             cell.setAttribute("onclick", "editPhone("+JSON.stringify(rowIt)+")");
             cell.style.width = "1%";
         }
@@ -903,7 +1113,7 @@ function fillTable(results_rows) {
             element.classList.add("inline");
             //element.setAttribute("id", wid);
             cell.appendChild(element);
-            element.innerHTML = escapeHTML(rowIt["name"]);
+            element.innerHTML = UTIL.escapeHTML(rowIt["name"]);
         }
         
         for (var pr in rowIt.props) {
@@ -937,10 +1147,10 @@ function fillTable(results_rows) {
                         //element.setAttribute("id", wid);
                         cell.appendChild(element);
                         if (propName.startsWith(CONST_VCARD_TEL) && el == "pval") {
-                            var tel = escapeHTML(elm[el]);
+                            var tel = UTIL.escapeHTML(elm[el]);
                             element.innerHTML = '<a href="tel: ' + tel + '">' + tel + '</a>';
                         } else {
-                            element.innerHTML = escapeHTML(elm[el]);
+                            element.innerHTML = UTIL.escapeHTML(elm[el]);
                         }
                         if (el == "id") {
                             element.classList.add("right");
@@ -998,7 +1208,7 @@ function dropTables(db, names) {
         }
     );
 }
-    
+
 function addPhone(db, obj, exists, callback) {
     var fn = null;
     for(let p in obj) {
@@ -1020,7 +1230,75 @@ function addPhone(db, obj, exists, callback) {
         }
     );
 }
+function savePhoneProperty(tx, editPhoneObj, parr, i) {
+    if ( i < parr.length ) {
+        savePhonePropertyLine(tx, editPhoneObj, parr, i, 0)
+    }
+}
+function savePhonePropertyLine(tx, editPhoneObj, parr, i, j) {
+    if (j < editPhoneObj.props[parr[i]].length) {
+        savePhonePropertyElement(tx, editPhoneObj, parr, i, j, editPhoneObj.props[parr[i]][j]);
+    } else {
+        savePhoneProperty(tx, editPhoneObj, parr, i+1)
+    }
+}
+function savePhonePropertyElement(tx, editPhoneObj, parr, i, j, el) {
+    if (el.id) {
+        var sqlParam = [el.id];
+        if ("_deleted" in el && el._deleted) {
+        
+            tx.executeSql('DELETE FROM phoneProp WHERE id = ? ', sqlParam, 
+                function(transaction, results){ 
+                    showStatus("Deleted: " + results.rowsAffected);
+                    //console.log(results); 
+                    savePhonePropertyLine(tx, editPhoneObj, parr, i, j+1);
+                }, 
+                function(err) { 
+                    showStatus("Error");
+                    //console.log(err);
+                    return true;
+                }
+            );                            
+        } else {
+            sqlParam = [el.pval, el.prop, el.id];
+            tx.executeSql('UPDATE phoneProp SET pval = ?, prop = ? WHERE id = ? ', sqlParam, 
+                function(transaction, results){ 
+                    showStatus("Updated: " + results.rowsAffected);
+                    //console.log(results); 
+                    savePhonePropertyLine(tx, editPhoneObj, parr, i, j+1);
+                }, 
+                function(err) { 
+                    showStatus("Error");
+                    //console.log(err);
+                    return true;
+                }
+            );                            
+        }
+    } else {
+        addPhonePropDb(tx, editPhoneObj.cardid, p, obj, function(){
+            savePhonePropertyLine(tx, editPhoneObj, parr, i, j+1);
+        });
+    }
 
+}
+function savePhone() {
+//////////////////////////////editPhoneObj
+    db.transaction(function (tx) {
+        tx.executeSql('UPDATE idphone SET name = ? WHERE id = ? ', [editPhoneObj.name, editPhoneObj.cardid], 
+            function(transaction, results){ 
+                showStatus("Updated: " + results.rowsAffected + " rows");
+                //console.log(tx,db); 
+                savePhoneProperty(tx, editPhoneObj, Object.keys(editPhoneObj.props), 0);
+            }, 
+            function(err) { 
+                showStatus("Error");
+                console.log(err);
+                return true;
+            }
+        );
+    });
+}
+    
 function addPhoneDb(db, obj, fn, callback) {
     if (fn) {
         db.transaction(function (tx) {
@@ -1044,25 +1322,35 @@ function addPhoneDb(db, obj, fn, callback) {
 }    
 function addPhoneProp(tx, cardid, obj, callback) {
     for (var p in obj) {
-        tx.executeSql('INSERT INTO phoneProp (cardid, prop, pval) VALUES (?, ?, ?)', [cardid, p, obj[p]], 
-            function(transaction, results){ 
-                showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
-                //console.log(results); 
-                if (callback) {
-                    callback(null, results);
-                }
-            }, 
-            function(err) { 
-                showStatus("Error");
-                console.log(err, cardid, p, obj[p]);
-                if (callback) {
-                    callback(err);
-                }
-                return true;
-            }
-        );
+        addPhonePropDb(tx, cardid, p, obj[p], null, null, callback);
     }
 }
+function addPhonePropDb(tx, cardid, p, obj, callbackOk, callbackErr, callback) {
+    tx.executeSql('INSERT INTO phoneProp (cardid, prop, pval) VALUES (?, ?, ?)', [cardid, p, obj], 
+        function(transaction, results){ 
+            showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
+            //console.log(results); 
+            if (callbackOk) {
+                callbackOk(null, results);
+            }
+            if (callback) {
+                callback(null, results);
+            }
+        }, 
+        function(err) { 
+            showStatus("Error");
+            console.log(err, cardid, p, obj);
+            if (callbackErr) {
+                callbackErr(err);
+            }
+            if (callback) {
+                callback(err);
+            }
+            return true;
+        }
+    );
+}
+
 function findPhone(db, name, callbackFound, callbackNotFound) {
     db.transaction(function (tx) {
         tx.executeSql('SELECT id FROM idphone WHERE name = ?', [name], 
