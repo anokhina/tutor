@@ -561,7 +561,8 @@ function fromEncoded(str) {
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <div class="tcontent">
             <form>
-            <input type="button" onclick="savePhone()" value="Save"/>
+            <input type="button" onclick="newPhone()" value="+ Add"/>
+            <input type="button" onclick="savePhone(editPhoneObj)" value="Save"/>
             <input type="button" id="phoneEditorTableReset" value="Reset"/>
             <input type="button" onclick='addPhoneProperty(CONST_VCARD_BDAY, "", true);' value="BDAY"/>
             <input type="button" onclick='addPhoneProperty(CONST_VCARD_ANNIVERSARY, "");' value="X-ANNIVERSARY"/>
@@ -725,6 +726,21 @@ function fillList(results_rows) {
     }
     console.log(ret);
     return ret;
+}
+function newPhone() {
+    editPhone({
+        cardid: null,
+        name: "",
+        props: {
+            FN: [{id: null, prop: "FN", pval: ""}],
+            N1: [{id: null, prop: "N1", pval: ""}],
+            N2: [{id: null, prop: "N2", pval: ""}],
+            N3: [{id: null, prop: "N3", pval: ""}],
+            N4: [{id: null, prop: "N4", pval: ""}],
+            N5: [{id: null, prop: "N5", pval: ""}],
+            TEL: [{id: null, prop: "TEL", pval: ""}]
+        }
+    });
 }
 function addPhoneProperty(propName, defVal, ifNotExist) {
     if (editPhoneObj) {
@@ -1029,8 +1045,29 @@ function _editPhone(rowIt) {
                                             n4 = rowIt.props["N4"][0][bel], 
                                             n5 = rowIt.props["N5"][0][bel];
                                             
-                                        rowIt.name = n1 + " " + n2 + " " + n3;
-                                        rowIt.props["FN"][0][bel] = n4 + " " + n1 + " " + n2 + " " + n3 + " " + n5;
+                                        rowIt.name = "";
+                                        if (n1) {
+                                            rowIt.name += (n1 + " ");
+                                        }
+                                        if (n2) {
+                                            rowIt.name += (n2 + " ");
+                                        }
+                                        if (n3) {
+                                            rowIt.name += n3;
+                                        }
+                                        
+                                        rowIt.name = rowIt.name.trim();
+                                        rowIt.props["FN"][0][bel] = "";
+                                        if (n4) {
+                                            rowIt.props["FN"][0][bel] += (n4 + " ");
+                                        }
+                                        if (rowIt.name) {
+                                            rowIt.props["FN"][0][bel] += (rowIt.name + " ");
+                                        }
+                                        if (n5) {
+                                            rowIt.props["FN"][0][bel] += n5;
+                                        }
+                                        rowIt.props["FN"][0][bel] = rowIt.props["FN"][0][bel].trim();
                                         rowIt.props["FN"][0]._bind.value = rowIt.props["FN"][0][bel];
                                         
                                         rowItNameElement.value = rowIt.name;
@@ -1275,28 +1312,46 @@ function savePhonePropertyElement(tx, editPhoneObj, parr, i, j, el) {
             );                            
         }
     } else {
-        addPhonePropDb(tx, editPhoneObj.cardid, p, obj, function(){
+        addPhonePropDb(tx, editPhoneObj.cardid, el.prop, el.pval, function(){
             savePhonePropertyLine(tx, editPhoneObj, parr, i, j+1);
         });
     }
 
 }
-function savePhone() {
+function savePhone(editPhoneObj) {
 //////////////////////////////editPhoneObj
-    db.transaction(function (tx) {
-        tx.executeSql('UPDATE idphone SET name = ? WHERE id = ? ', [editPhoneObj.name, editPhoneObj.cardid], 
-            function(transaction, results){ 
-                showStatus("Updated: " + results.rowsAffected + " rows");
-                //console.log(tx,db); 
-                savePhoneProperty(tx, editPhoneObj, Object.keys(editPhoneObj.props), 0);
-            }, 
-            function(err) { 
-                showStatus("Error");
-                console.log(err);
-                return true;
-            }
-        );
-    });
+    if (editPhoneObj.cardid) {
+        db.transaction(function (tx) {
+            tx.executeSql('UPDATE idphone SET name = ? WHERE id = ? ', [editPhoneObj.name, editPhoneObj.cardid], 
+                function(transaction, results){ 
+                    showStatus("Updated: " + results.rowsAffected + " rows");
+                    //console.log(tx,db); 
+                    savePhoneProperty(tx, editPhoneObj, Object.keys(editPhoneObj.props), 0);
+                }, 
+                function(err) { 
+                    showStatus("Error");
+                    console.log(err);
+                    return true;
+                }
+            );
+        });
+    } else {
+        db.transaction(function (tx) {
+            tx.executeSql('INSERT INTO idphone (name) VALUES (?)', [editPhoneObj.name], 
+                function(transaction, results){ 
+                    editPhoneObj.cardid = results.insertId;
+                    showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
+                    //console.log(tx,db); 
+                    savePhoneProperty(tx, editPhoneObj, Object.keys(editPhoneObj.props), 0);
+                }, 
+                function(err) { 
+                    showStatus("Error");
+                    console.log(err);
+                    return true;
+                }
+            );
+        });    
+    }
 }
     
 function addPhoneDb(db, obj, fn, callback) {
