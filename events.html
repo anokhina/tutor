@@ -118,7 +118,7 @@ div.tab button.active {
 <body>
 
 <script>
-var UTIL = (function(e) {
+var UTIL = (function() {
     var self = {
     };
     
@@ -146,12 +146,12 @@ var UTIL = (function(e) {
     self.escapeHTML = function(html) {
         __escape.textContent = html;
         return __escape.innerHTML;
-    }
+    };
 
     self.unescapeHTML = function (html) {
         __escape.innerHTML = html;
         return __escape.textContent;
-    }
+    };
     
     self.parseDate = function (str) {
         if (str) {
@@ -169,7 +169,7 @@ var UTIL = (function(e) {
             }
         }
         return null;
-    }
+    };
     
     self.tokenize = function (s, esc, sep) {
         for (var a=[], t='', i=0, e=s.length; i<e; i++) {
@@ -180,15 +180,16 @@ var UTIL = (function(e) {
         }
         a.push(t);
         return a;
-    }    
+    };
+    
+    self.generateGuid = function() {
+        return Math.random().toString(36).substring(2, 15) +
+            Math.random().toString(36).substring(2, 15);
+    };
     
     return self;
 })();
 
-function generateGuid() {
-    return Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15);
-}    
 function dropTables(db, names) {
     db.transaction(
         function(transaction) {
@@ -367,32 +368,50 @@ function saveAs(data, filename) {
         document.body.removeChild(elem);
     }
 }
-function handleFileSelect(evt) {
-    if (window.File && window.FileReader && window.FileList && window.Blob) {
+var IOUTIL = (function() {
+    var self = {
+    };
+    
+    self.FileOpener = function() {
+        var fileOpenerObj = this;
+        
+        fileOpenerObj.readFile = function(f) {
+            console.log("read file:", f);
+        };
+        fileOpenerObj.handleFileSelect = function(evt) {
+            if (window.File && window.FileReader && window.FileList && window.Blob) {
 
-    } else {
-        alert('The File APIs are not fully supported in this browser.');
-        return;
-    }
+            } else {
+                alert('The File APIs are not fully supported in this browser.');
+                return;
+            }
 
-    var files = evt.target.files;
-
-    var output = [];
-    for (var i = 0, f; f = files[i]; i++) {
-        var reader = new FileReader();
-        reader.readAsText (f);
-        reader.onload = function(e) {
-            var text = reader.result;
-            try {
-                var cfg = JSON.parse(text);
-                importData(cfg);
-            } catch (e) {
-                console.log("parse json error", e);
-                showStatus("parse json error");
+            for (var i = 0, f; f = evt.target.files[i]; i++) {
+                fileOpenerObj.readFile(f);
             }
         };
-    }
-}
+    };
+    self.FileOpenerText = function(textProcessorFn) {
+        var fileOpenerTextObj = this;
+        self.FileOpener.call(this);
+        
+        fileOpenerTextObj.textProcessor = function(text) {
+        };
+        fileOpenerTextObj.readAsText = function(f) {
+            var reader = new FileReader();
+            reader.readAsText (f);
+            reader.onload = function(e) {
+                fileOpenerTextObj.textProcessor(reader.result);
+            };
+        };
+        fileOpenerTextObj.readFile = function(f) {
+            fileOpenerTextObj.readAsText(f);
+        };
+        fileOpenerTextObj.textProcessor = textProcessorFn;
+    };
+    
+    return self;
+})();
 </script>
 
 <div class="controldiv">
@@ -442,7 +461,7 @@ function handleFileSelect(evt) {
             <table style="width:100%"><tr>
             <td>
             <button type="reset" value="Reset" class="Reset">Reset</button>
-            Import: <input type="file" id="files" name="files[]" />
+            Import: <input type="file" id="files1" name="files1[]" />
             </td>
             </tr>
             </table>
@@ -461,7 +480,7 @@ function handleFileSelect(evt) {
             </td></tr><tr><td>
             <div class="inline">From date: <input type="date" id="fromdate" name="fromdate" /></div>
             <div class="inline">To date: <input type="date" id="todate" name="todate" /></div>
-            <div>Name:</div><input type="text" id="fename" name="fename" style="width:100%"/>
+            <div>Name:</div><input type="text" id="fename" name="fename" style="width:100%"  value="test%"/>
             </td></tr><tr><td>
             <div class="inline">Limit: <input type="text" id="elimit" name="elimit" value="30" size="4" min="5" maxlength="3" onchange="document.getElementById('eoffset').step=this.value;" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
             <div class="inline">Offset: <input id="eoffset" name="eoffset" value="0" step="30" type="number" min="0" maxlength="40" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
@@ -487,7 +506,15 @@ function handleFileSelect(evt) {
 <script>
 newEvent();
 searchFormReset();
-document.getElementById('files').addEventListener('change', handleFileSelect, false);
+document.getElementById('files1').addEventListener('change', new IOUTIL.FileOpenerText(function(text){
+    try {
+        var cfg = JSON.parse(text);
+        importData(cfg);
+    } catch (e) {
+        console.log("parse json error", e);
+        showStatus("parse json error");
+    }
+}).handleFileSelect, false);
 
     var __idprefix = null;
     var db = openDatabase('sevnEvents', '1.0', 'Events db', 20 * 1024 * 1024);
@@ -514,7 +541,7 @@ document.getElementById('files').addEventListener('change', handleFileSelect, fa
     getPrefix(db);
     
 function addEventDB(db, edate, ename, ememo, elen) {
-    var id = __idprefix + "-" + generateGuid();
+    var id = __idprefix + "-" + UTIL.generateGuid();
     db.transaction(function (tx) {
         tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen) VALUES (?,?,?,?,?)', [id, edate, ename, ememo, elen], 
             function(transaction, results){ 
@@ -743,7 +770,7 @@ function getPrefix(db) {
                 } else {
                     
                     while (__idprefix == null || __idprefix == "") {
-                        __idprefix = prompt("Please enter device id", generateGuid());
+                        __idprefix = prompt("Please enter device id", UTIL.generateGuid());
                     }
                     
                     tx.executeSql('INSERT INTO idprefix (id, name) VALUES (?,?)', [1, __idprefix], 
