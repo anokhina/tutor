@@ -117,105 +117,12 @@ div.tab button.active {
 
 <body>
 
+<script type="text/javascript" src="jslib/UTIL.js"></script>
+<script type="text/javascript" src="jslib/UTILDB.js"></script>
+<script type="text/javascript" src="jslib/UTILIO.js"></script>
+
 <script>
-var UTIL = (function() {
-    var self = {
-    };
-    
-    self.toObject = function (arr) {
-        var ret = {};
-        for (let i = 0; i < arr.length; ++i) {
-            ret[i] = arr[i];
-        }
-        ret.length = arr.length;
-        return ret;
-    };
-    
-    self.namespace = function(ns) {
-        var o = this, ts = ns.split("."), t;
-        while (ts.length > 0) {
-            t = ts.shift();
-            if (typeof o[t] === "undefined") { o[t] = {};}
-            o = o[t];
-        }
 
-        return o;
-    };
-    
-    var __escape = document.createElement('textarea');
-    self.escapeHTML = function(html) {
-        __escape.textContent = html;
-        return __escape.innerHTML;
-    };
-
-    self.unescapeHTML = function (html) {
-        __escape.innerHTML = html;
-        return __escape.textContent;
-    };
-    
-    self.parseDate = function (str) {
-        if (str) {
-            str = str.trim();
-            var d = new Date(str + " UTC"), ds;
-            if(/^(\d){8}$/.test(str)) {
-                var yy = str.substr(0,4),
-                    mm = str.substr(4,2) - 1,
-                    dd = str.substr(6,2);
-                d = new Date(Date.UTC(yy,mm,dd));
-            }
-            try {
-                return d.toISOString().slice(0,10);
-            } catch (e) {
-            }
-        }
-        return null;
-    };
-    
-    self.tokenize = function (s, esc, sep) {
-        for (var a=[], t='', i=0, e=s.length; i<e; i++) {
-            var c = s.charAt(i);
-            if (c == esc) { t+=s.charAt(++i); }
-            else if (c != sep) { t+=c }
-            else { a.push(t); t=''; }
-        }
-        a.push(t);
-        return a;
-    };
-    
-    self.generateGuid = function() {
-        return Math.random().toString(36).substring(2, 15) +
-            Math.random().toString(36).substring(2, 15);
-    };
-    
-    return self;
-})();
-
-function dropTables(db, names) {
-    db.transaction(
-        function(transaction) {
-            names.forEach(function(name) {
-                transaction.executeSql(
-                    'DROP TABLE IF EXISTS ' + name
-                );
-            });
-        }
-    );
-}
-function dropViews(db, names) {
-    db.transaction(
-        function(transaction) {
-            names.forEach(function(name) {
-                transaction.executeSql(
-                    'DROP VIEW IF EXISTS ' + name
-                );
-            });
-        }
-    );
-}
-
-function isFunction(v) {
-    return (v && typeof v === "function");
-}
 function newEvent() {
     document.getElementById('eid').value = "";
     document.getElementById('ename').value = "";
@@ -330,20 +237,11 @@ function searchFormReset() {
     document.getElementById('todate').value = futureDate.toISOString().substr(0, 10);
 }
 function saveObj2FS(obj, filePrefix) {
-    console.log(obj, JSON.stringify( obj, null, 2 ));
-    var text = JSON.stringify( obj, null, 2 );
-    var obj1 = JSON.parse(text);
-    obj1.length = obj.length;
-    text = JSON.stringify( obj1, null, 2 );
-    
-    var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
-    var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
     var filenameUname = "-" + "events" + "-";
-    if (filePrefix) {
-    } else {
+    if (filePrefix === undefined ) {
         filePrefix = "exportData";
     }
-    saveAs(blob, filePrefix+filenameUname+todayDate+".json");
+    UTILIO.saveAs(UTILIO.text2blob(UTIL.objDB2text(obj)), filePrefix+filenameUname+UTIL.date2text(new Date())+".json");
 }
 function exportData() {
     showEvents(db, saveObj2FS );
@@ -355,63 +253,6 @@ function importData(obj) {
         importTable(obj, 0, []);
     }
 }
-function saveAs(data, filename) {
-    var blob = new Blob([data], {type: "text/plain;charset=utf-8"});
-    if (window.navigator.msSaveOrOpenBlob) {
-        window.navigator.msSaveBlob(blob, filename);
-    } else {
-        var elem = window.document.createElement('a');
-        elem.href = window.URL.createObjectURL(blob);
-        elem.download = filename;        
-        document.body.appendChild(elem);
-        elem.click();        
-        document.body.removeChild(elem);
-    }
-}
-var IOUTIL = (function() {
-    var self = {
-    };
-    
-    self.FileOpener = function() {
-        var fileOpenerObj = this;
-        
-        fileOpenerObj.readFile = function(f) {
-            console.log("read file:", f);
-        };
-        fileOpenerObj.handleFileSelect = function(evt) {
-            if (window.File && window.FileReader && window.FileList && window.Blob) {
-
-            } else {
-                alert('The File APIs are not fully supported in this browser.');
-                return;
-            }
-
-            for (var i = 0, f; f = evt.target.files[i]; i++) {
-                fileOpenerObj.readFile(f);
-            }
-        };
-    };
-    self.FileOpenerText = function(textProcessorFn) {
-        var fileOpenerTextObj = this;
-        self.FileOpener.call(this);
-        
-        fileOpenerTextObj.textProcessor = function(text) {
-        };
-        fileOpenerTextObj.readAsText = function(f) {
-            var reader = new FileReader();
-            reader.readAsText (f);
-            reader.onload = function(e) {
-                fileOpenerTextObj.textProcessor(reader.result);
-            };
-        };
-        fileOpenerTextObj.readFile = function(f) {
-            fileOpenerTextObj.readAsText(f);
-        };
-        fileOpenerTextObj.textProcessor = textProcessorFn;
-    };
-    
-    return self;
-})();
 </script>
 
 <div class="controldiv">
@@ -480,7 +321,7 @@ var IOUTIL = (function() {
             </td></tr><tr><td>
             <div class="inline">From date: <input type="date" id="fromdate" name="fromdate" /></div>
             <div class="inline">To date: <input type="date" id="todate" name="todate" /></div>
-            <div>Name:</div><input type="text" id="fename" name="fename" style="width:100%"  value="test%"/>
+            <div>Name:</div><input type="text" id="fename" name="fename" style="width:100%" value="test%"/>
             </td></tr><tr><td>
             <div class="inline">Limit: <input type="text" id="elimit" name="elimit" value="30" size="4" min="5" maxlength="3" onchange="document.getElementById('eoffset').step=this.value;" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
             <div class="inline">Offset: <input id="eoffset" name="eoffset" value="0" step="30" type="number" min="0" maxlength="40" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
@@ -506,20 +347,23 @@ var IOUTIL = (function() {
 <script>
 newEvent();
 searchFormReset();
-document.getElementById('files1').addEventListener('change', new IOUTIL.FileOpenerText(function(text){
-    try {
-        var cfg = JSON.parse(text);
-        importData(cfg);
-    } catch (e) {
-        console.log("parse json error", e);
-        showStatus("parse json error");
-    }
-}).handleFileSelect, false);
+document.getElementById('files1').addEventListener('change', 
+    function(evt) {
+        new UTILIO.FileOpenerText(function(text){
+            try {
+                var cfg = JSON.parse(text);
+                importData(cfg);
+            } catch (e) {
+                console.log("parse json error", e);
+                showStatus("parse json error");
+            }
+        }).handleFileSelect(evt);
+    }, false);
 
     var __idprefix = null;
     var db = openDatabase('sevnEvents', '1.0', 'Events db', 20 * 1024 * 1024);
-//dropTables(db, ["events", "idprefix"]);
-//dropViews(db, ["v_events"]);    
+//UTILDB.dropTables(db, ["events", "idprefix"]);
+//UTILDB.dropViews(db, ["v_events"]);    
     db.transaction(
     //SELECT ROWID, * FROM events ORDER BY edate DESC, ename ASC
         function(transaction) {
@@ -736,24 +580,6 @@ sql =
             function(err) { 
                 //console.log(err);
                 showStatus("Error");
-            }
-        );
-    });
-}    
-function showTable(db, table) {
-    db.transaction(function (tx) {
-        tx.executeSql('SELECT ROWID, * FROM ' + table, [], 
-            function (tx, results) {
-                var len = results.rows.length;
-                var msg = "<p>Found rows: " + len + "</p>";
-                console.log(msg);
-        
-                for (var i = 0; i < len; i++) {
-                    console.log(i, results.rows.item(i));
-                }
-            },
-            function(err) { 
-                console.log(err);
             }
         );
     });
