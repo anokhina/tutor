@@ -496,6 +496,25 @@ function saveEventDB(db, evt /*id, edate, ename, ememo, elen*/, errLines, callba
         );
      });
 }    
+function saveEventDBTag(db, evt /*id, edate, ename, ememo, elen*/, errLines, callback) {
+     db.transaction(function (tx) {
+        tx.executeSql('UPDATE events SET etag = ? WHERE id = ? ', [ evt.etag, evt.id], 
+            function(transaction, results){ 
+                showStatus("Updated: " + results.rowsAffected);
+                //console.log(results); 
+                if (callback) callback();
+            }, 
+            function(err) { 
+                showStatus("Error");
+                if (errLines) {
+                    errLines.push({id: evt.id, etag:evt.etag});
+                }
+                //console.log(err);
+                if (callback) callback();
+            }
+        );
+     });
+}    
 function deleteEventDB(db, id) {
      db.transaction(function (tx) {
         tx.executeSql('DELETE FROM events WHERE id = ? ', [id], 
@@ -608,6 +627,15 @@ function fillTable(results_rows) {
                             chbox.checked = true;
                         }
                     }
+                    (function(id){
+                        chbox.onchange = function(e) {
+                            if (e.target.checked) {
+                                saveEventDBTag(db, {id: id, etag: -1});
+                            } else {
+                                saveEventDBTag(db, {id: id, etag: ''});
+                            }
+                        };
+                    })(rowIt.id);
                     var elementLabel = document.createTextNode(UTIL.escapeHTML(cellVal));
                     element.appendChild(chbox);
                     element.appendChild(elementLabel);
