@@ -171,8 +171,33 @@ function delEvent() {
         showEvents(db, 2);
     }    
 }
+function showHtml(obj) {
+    //if (obj.id)
+    processById(db, obj.id, showHtmlObj);
+}
+function showHtmlObj(obj) {
+    var frame = document.getElementById("theFrame");
+          
+    var doc = document.implementation.createHTMLDocument("");
+    doc.body.innerHTML = obj.ememo;
+
+    var destDocument = frame.contentDocument;
+    var newNode = destDocument.importNode(doc.documentElement, true);
+
+    destDocument.replaceChild(newNode, destDocument.documentElement);
+    openTab({ currentTarget: document.getElementById("buttonView") }, "View");
+}
+function viewMemo() {
+    showHtmlObj ({ ememo: document.getElementById("ememo").value });
+}
+
 function editEvent(obj) {
+    //if (obj.id)
+    processById(db, obj.id, editEventObj);
+}
+function editEventObj(obj) {
     //TODO check form changes
+    ///////////////obj.id 
     var eid = document.getElementById('eid').value, 
         ename = document.getElementById('ename').value;
 
@@ -187,7 +212,10 @@ function editEvent(obj) {
     document.getElementById('ename').value = obj["ename"];
     document.getElementById('ememo').value = obj["ememo"];
     document.getElementById('elen').value = obj["elen"];
-    document.getElementById('edate').value = document.getElementById('edate').value = new Date(obj["edate"]).toISOString().substr(0, 10);
+    document.getElementById('edate').value = null;
+    try {
+        document.getElementById('edate').value = new Date(obj["edate"]).toISOString().substr(0, 10);
+    } catch (e) {}
     openTab({ currentTarget: document.getElementById("buttonEdit") }, "Edit");
 
 }
@@ -263,12 +291,21 @@ function importData(obj) {
       <button class="tablinks" onclick="openTab(event, 'Find')" id="defaultOpen">Find</button>
       <button class="tablinks" onclick="openTab(event, 'Edit')" id="buttonEdit">Edit</button>
       <button class="tablinks" onclick="openTab(event, 'Import')">Import</button>
+      <button class="tablinks" onclick="openTab(event, 'View')" id="buttonView">View</button>
       <button class="tablinks" onclick="openTab(event, 'Errors')">Errors</button>
     </div>
 </div>
 
 
 <div class="controlleddiv">
+
+
+    <div id="View" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <iframe id="theFrame" srcdoc="" width="100%"></iframe>
+        </div>
+    </div>
 
     <div id="Edit" class="tabcontent">
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
@@ -288,6 +325,7 @@ function importData(obj) {
             <input type="button" onclick="newEvent()" value="New"/>
             <input type="button" onclick="addEvent()" value="Add"/>
             <input type="button" onclick="saveEvent()" value="Save"/>
+            <input type="button" onclick="viewMemo()" value="View memo"/>
             </td></tr>
             </table>
             </form>
@@ -330,6 +368,8 @@ function importData(obj) {
             <input type="button" onclick="document.getElementById('eoffset').value = parseInt(document.getElementById('eoffset').value) + parseInt(document.getElementById('elimit').value) ;showEvents(db, 2);" value="Next>"/>
             <input type="button" onclick="document.getElementById('eoffset').value = LAST_OFFSET; showEvents(db, 2);" value="Last offset>"/>
             <div id="countDiv" class="inline" style="padding-left:5px;"></div>
+            </td></tr><tr><td>
+            <input type="checkbox" id="showAsHTML"/>As Html
             </td></tr>
             </table>
             </form>
@@ -469,7 +509,8 @@ function importTable(results_rows, i, errLines) {
 }
 function fillTable(results_rows) {
     var len = results_rows.length,
-        offset = parseInt(document.getElementById('eoffset').value);
+        offset = parseInt(document.getElementById('eoffset').value),
+        showAsHTML = document.getElementById('showAsHTML').checked;
     if(isNaN(offset)) offset = 0;
                 
     var table = document.getElementById("eventListTable");
@@ -524,23 +565,48 @@ function fillTable(results_rows) {
         var rowIt = rowItem(results_rows,i);
         for (var p in columnNames) {
             if (p == "id") {
-                cellNum.setAttribute("onclick", "editEvent("+JSON.stringify(rowIt)+")");
+                var obj = {};
+                obj.id = rowIt.id;
+                cellNum.setAttribute("onclick", "editEvent("+JSON.stringify(obj)+")");
             } else {
                 var cell = row.insertCell(j);
                 j++;
                 var element = document.createElement("div");
-                //element.setAttribute("id", wid);
+                var cellVal = rowIt[p];
+                if (p == "ememo") {
+                    if (showAsHTML) {
+                        var frame = document.createElement("iframe");
+                        element = frame;
+                        element.srcdoc = cellVal;
+                        element.setAttribute("onload", "setFrameSize(this)");
+                    } else {
+                        cellVal = cellVal.substr(0, Math.min(cellVal.length, 20));
+                        element.innerHTML = UTIL.escapeHTML(cellVal);
+                    }
+                } else {
+                    element.innerHTML = UTIL.escapeHTML(cellVal);
+                }
                 cell.appendChild(element);
-                //TODO escape
-                element.innerHTML = UTIL.escapeHTML(rowIt[p]);
             }
             if (p == "ename" || p == "ememo" || p == "id" || p=="edate") {} else {
                 cell.style.width = "1%";
+            }
+            if (p == "ememo") {
+                var obj = {};
+                obj.id = rowIt.id;
+                cell.setAttribute("onclick", "showHtml("+JSON.stringify(obj)+")");
             }
         }
 
         //console.log(i, results_rows.item(i));
     }
+}
+function setFrameSize(frame) {
+    frame.style.height=frame.contentDocument.body.scrollHeight +'px';
+    frame.style.border = "0px";
+    frame.contentDocument.body.style.padding = "0px";
+    frame.contentDocument.body.style.margin = "0px";
+
 }
 
 function rowItem (results_rows, i) {
@@ -549,6 +615,32 @@ function rowItem (results_rows, i) {
     } else {
         return results_rows[i];
     }
+}
+
+function processById(db, id, callback) {
+    //ename, ememo, id, elen, edate
+    var sql = "SELECT * FROM events WHERE id = ?";
+    if (callback) db.transaction(function (tx) {
+        tx.executeSql(sql, [id], 
+            function (tx, results) {
+                var len = results.rows.length;
+                var obj = { id: "", ename: "", ememo: "", elen: "", edate: ""};
+                if (len > 0) {
+                    var rowIt = rowItem(results.rows,0);
+                    obj.id = rowIt.id;
+                    obj.ename = rowIt.ename;
+                    obj.ememo = rowIt.ememo;
+                    obj.elen = rowIt.elen;
+                    obj.edate = rowIt.edate;
+                }
+                callback(obj);
+            },
+            function(err) { 
+                //console.log(err);
+                showStatus("Error");
+            }
+        );    
+    });
 }
 
 var LAST_OFFSET = 0;
