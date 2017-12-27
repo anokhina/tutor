@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!--
+Copyright 2017 Veronica Anokhina.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<html>
+<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style type="text/css">
+html, body {
+    width:100%;
+    padding:0px;
+    margin:0px;
+}   
+.inline {
+    display: inline-block;
+    padding-top: 2px;
+}  
+textarea { 
+    resize:vertical; 
+    padding: 0px;
+    margin: 0px;    
+}
+#controldiv {
+    text-align: center;
+}
+.tablinks {
+    background-color: inherit;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 10px 6px;
+    transition: 0.3s;
+    font-size: large;
+}
+
+  </style>
+
+<body onload="onld()">
+<div id="controldiv">
+</div>
+<script>
+
+function onld() {
+    [
+    {   name: "Events",
+        nameProg: "events.html",
+        nameProgFull: "Events"
+    }
+    ,{   name: "qrcode",
+        nameProg: "qrcodebutton.html ",
+        nameProgFull: "QR Code"
+    }
+    //phones.html 
+    ,{   name: "phones",
+        nameProg: "phones.html ",
+        nameProgFull: "Contacts and phones"
+    }
+    //memoryGame.html 
+    ,{   name: "memoryGame",
+        nameProg: "memoryGame.html ",
+        nameProgFull: "Memory game / Match game"
+    }
+    //studyWords.html 
+    ,{   name: "studyWords",
+        nameProg: "studyWords.html ",
+        nameProgFull: "Learn words"
+    }
+    //trainReading.html 
+    ,{   name: "trainReading",
+        nameProg: "trainReading.html ",
+        nameProgFull: "Train reading"
+    }
+    
+    ].forEach(function(obj){
+        var mdiv = document.getElementById('controldiv');
+        mdiv.appendChild(document.createElement("br"));
+        var element = document.createElement("button");
+        element.setAttribute("class", "tablinks");
+        element.setAttribute("id", "button"+obj.name);
+        element.setAttribute("onclick", "openProg('"+obj.nameProg+"');");
+        element.appendChild(document.createTextNode(obj.nameProgFull));
+        mdiv.appendChild(element);
+    });
+}    
+function openProg(url) {
+    window.location.href = url;
+}
+</script>
+</body>
+</html>
+
