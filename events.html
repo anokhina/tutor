@@ -320,8 +320,8 @@ function importData(obj) {
             </td></tr><tr><td>
             <input type="text" readonly="true" id="eid" name="eid"/>
             <div class="inline">Date: <input type="date" id="edate" name="edate" /></div>
-            <div class="inline">Length: <input type="text" id="elen" name="elen" value="1" type="number" size="4" min="0" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);parseInt(this.value);this.value=(this.value   < 0) ? (Math.abs(this.value)) : isNaN(parseInt(this.value)) ? this.min : parseInt(this.value)"/></div>
-            <div class="inline">Tag: <input type="text" id="etag" name="etag" type="number" size="4" min="-1" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value = parseInt(this.value); this.value=(this.value   < parseInt(this.min)) ? (parseInt(this.min)) : isNaN(parseInt(this.value)) ? 0 : this.value"/></div>
+            <div class="inline">Length: <input type="text" id="elen" name="elen" value="1" size="4" min="0"  maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=!isNaN(parseInt(this.value)) ? ((parseInt(this.value) < parseInt(this.min))? (parseInt(this.min)) : parseInt(this.value)) : (this.value == '-') ? '-' : ''"/></div>
+            <div class="inline">Tag:    <input type="text" id="etag" name="etag"           size="4" min="-1" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=!isNaN(parseInt(this.value)) ? ((parseInt(this.value) < parseInt(this.min))? (parseInt(this.min)) : parseInt(this.value)) : (this.value == '-') ? '-' : ''"/></div>
             <div>Name:</div><input type="text" id="ename" name="ename" style="width:100%"/>
             </td></tr><tr><td><div class="inline-no">Memo: <textarea rows="5" type="text" id="ememo" name="ememo" style="width:100%" ></textarea></div>
             </td></tr><tr><td>
@@ -360,11 +360,12 @@ function importData(obj) {
             <td>
             <input type="submit" value="Log">
             <input type="button" onclick="searchFormReset()" value="Reset"/>
+            <input type="button" onclick="showEvents(db, -2)" value="Delete selected"/>
             </td></tr><tr><td>
             <div class="inline">From date: <input type="date" id="fromdate" name="fromdate" /></div>
             <div class="inline">To date: <input type="date" id="todate" name="todate" /></div>
             <div>Name:</div><input type="text" id="fename" name="fename" style="width:100%" value="test%"/>
-            <div class="inline">Tag: <input type="text" id="fetag" name="fetag" type="number" size="4" min="-1" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value = parseInt(this.value); this.value=(this.value   < parseInt(this.min)) ? (parseInt(this.min)) : isNaN(parseInt(this.value)) ? '' : this.value"/></div>
+            <div class="inline">Tag: <input type="text" id="fetag" name="fetag" type="number" size="4" min="-1" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=!isNaN(parseInt(this.value)) ? ((parseInt(this.value) < parseInt(this.min))? (parseInt(this.min)) : parseInt(this.value)) : (this.value == '-') ? '-' : ''"/></div>
             </td></tr><tr><td>
             <input type="button" onclick="document.getElementById('eoffset').value = 0; showEvents(db, 2);" value="Begin>"/>
             <input type="button" onclick="if(parseInt(document.getElementById('eoffset').value) >= parseInt(document.getElementById('elimit').value)) { document.getElementById('eoffset').value= parseInt(document.getElementById('eoffset').value) - parseInt(document.getElementById('elimit').value);showEvents(db, 2);}" value="&lt;Prev"/>
@@ -449,7 +450,7 @@ document.getElementById('files1').addEventListener('change',
 function addEventDB(db, evt /*edate, ename, ememo, elen*/) {
     var id = __idprefix + "-" + UTIL.generateGuid();
     db.transaction(function (tx) {
-        tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen, etag) VALUES (?,?,?,?,?, ?)', [evt.id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag], 
+        tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen, etag) VALUES (?,?,?,?,?, ?)', [id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag], 
             function(transaction, results){ 
                 showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
                 //console.log(results); 
@@ -567,10 +568,10 @@ function fillTable(results_rows) {
             
             var cellNum = row.insertCell(j);
             j++;
-            var element = document.createElement("div");
+            var element = document.createTextNode("N");
             cellNum.appendChild(element);
-            element.innerHTML = "N";
-            cellNum.style.width = "1%";
+            cellNum.style.width = "25px";
+            cellNum.style.minWidth = "25px";
             
             for (var p in columnNames) {
                 if (p == "id") {
@@ -593,10 +594,10 @@ function fillTable(results_rows) {
         
         var cellNum = row.insertCell(j);
         j++;
-        var element = document.createElement("div");
+        var element = document.createTextNode("" + (offset+i+1));
         cellNum.appendChild(element);
-        element.innerHTML = "" + (offset+i+1);
-        cellNum.style.width = "1%";
+        cellNum.style.width = "25px";
+        cellNum.style.minWidth = "25px";
         
         var rowIt = rowItem(results_rows,i);
         for (var p in columnNames) {
@@ -702,6 +703,12 @@ function processById(db, id, callback) {
 
 var LAST_OFFSET = 0;
 function showEvents(db, isCount, callback) {
+    if (isCount && isCount < 0) {
+        if (confirm("Will delete selected data?") != true) {
+            return;
+        }
+    }
+    fillTable({length: 0});
     db.transaction(function (tx) {
         //date(l/1000,'unixepoch','localtime') //sqlite ms to date
         var date = new Date().toISOString().substr(0, 10); //TODO UTC
@@ -746,77 +753,80 @@ function showEvents(db, isCount, callback) {
 " WHERE id NOT IN (SELECT id FROM jt1) AND edate BETWEEN ? AND ? " + "\n" +
 " ORDER BY edate DESC, ename ASC "+  "\n";
         if (fename || fetag) {
-            var fetagSql = "", fenameSql = "", fetagSql1 = "", fenameSql1 = "";
-            if (fename && fetag) {
-                fenameSql = " ename LIKE ? ";
-                fenameSql1 = " t1.ename LIKE ? ";
-                fetagSql = " AND etag == ? ";
-                fetagSql1 = " AND t1.etag == ? ";
-                sqlparam = [date, fename, fetag, date, date1, date, date2, date, date1, date2,
-                    fename, fetag, date1, date2, date1, date2, fename, fetag, limit, offset];
-                sqlparamCount = [date, fename, fetag, date, date1, date, date2, date, date1, date2,
-                    fename, fetag, date1, date2, date1, date2, fename, fetag];
-            } else if (fename) {
-                fenameSql = " ename LIKE ? ";
-                fenameSql1 = " t1.ename LIKE ? ";
                 sqlparam = [date, fename, date, date1, date, date2, date, date1, date2,
                     fename, date1, date2, date1, date2, fename, limit, offset];
                 sqlparamCount = [date, fename, date, date1, date, date2, date, date1, date2,
                     fename, date1, date2, date1, date2, fename];
-            } else {
-                fetagSql = " etag == ? ";
-                fetagSql1 = " t1.etag == ? ";
-                sqlparam = [date, fetag, date, date1, date, date2, date, date1, date2,
-                    fetag, date1, date2, date1, date2, fetag, limit, offset];
-                sqlparamCount = [date, fetag, date, date1, date, date2, date, date1, date2,
-                    fetag, date1, date2, date1, date2, fetag];
-            }
+                var fenameSql = " ename LIKE ? ";
+                var fenameSql1 = " t2.ename LIKE ? ";
 sqlBasic = 
 "WITH jt1 AS " + "\n" +
 "(SELECT etag, ename, ememo, id, elen, l AS pdate, r AS edate, CAST ((julianday(r)-julianday(l)) AS INTEGER) AS dlen FROM ( " + "\n" +
 " SELECT etag, ename, ememo, id, elen, l, min(r) AS r FROM ( " +  "\n" +
 //FAKE
 " SELECT '' AS etag, ename, edate AS l, ? AS r , 'FAKE' AS ememo, '' as id, '' AS elen FROM events " +  "\n" +
-" WHERE " + fenameSql + fetagSql + "\n" +
+" WHERE " + fenameSql + "\n" +
 " AND " +  "\n" +
 " ? >= ? AND ? <= ? AND edate < ? AND edate >= ? AND edate <= ? "+  "\n" +
 " UNION ALL " +  "\n" +//FAKE
 " SELECT t2.etag, t1.ename, t1.edate AS l, t2.edate AS r, t2.ememo, t2.id, t2.elen "+ "\n" +
 "  FROM events t1 "+ "\n" +
 "  JOIN events t2 "+ "\n" +
-"    ON (t1.ename = t2.ename) AND "+ fenameSql1 + fetagSql1 + "\n" +
+"    ON (t1.ename = t2.ename) AND "+ fenameSql1 + "\n" +
 " WHERE t1.edate < t2.edate AND t1.edate >= ? AND t2.edate <= ? "+ "\n" +
 " ) GROUP BY ename, l "+ "\n" +
 " )) " + "\n" +
 " SELECT * FROM jt1 " + "\n" +
 " UNION ALL " + "\n" +
 " SELECT etag, ename, ememo, id, elen, '' AS pdate, edate, 0 AS dlen FROM events " + "\n" +
-" WHERE id NOT IN (SELECT id FROM jt1) AND edate BETWEEN ? AND ? AND " + fenameSql + fetagSql + "\n" +
+" WHERE id NOT IN (SELECT id FROM jt1) AND edate BETWEEN ? AND ? AND " + fenameSql + "\n" +
 " ORDER BY edate DESC, ename ASC "+  "\n";
         }
         var sql = sqlBasic + " LIMIT ? OFFSET ? ";
         var sqlCount = "SELECT count(*) AS cnt FROM (" + sqlBasic + ")";
+        var sqlDelete = "DELETE FROM events WHERE id IN (SELECT DISTINCT id FROM (" + sqlBasic + "))";
+        if (fetag) {
+            sql = "SELECT * FROM (" + sqlBasic + ") WHERE etag = ? LIMIT ? OFFSET ? ";
+            sqlDelete = "DELETE FROM events WHERE id IN (SELECT DISTINCT id FROM (" + sqlBasic + ") WHERE etag = ?)";
+            sqlCount = "SELECT count(*) as cnt FROM (" + sqlBasic + ") WHERE etag = ? ";
+            sqlparam = [date, fename, date, date1, date, date2, date, date1, date2,
+                fename, date1, date2, date1, date2, fename, parseInt(fetag), limit, offset];
+            sqlparamCount = [date, fename, date, date1, date, date2, date, date1, date2,
+                fename, date1, date2, date1, date2, fename, parseInt(fetag)];
+        }
 
         if (isCount) {
-            tx.executeSql(sqlCount, sqlparamCount, 
-                function (tx, results) {
-                    var rowIt = rowItem(results.rows,0);
-                    var cnt = parseInt(rowIt["cnt"]);
-                    if (isNaN(cnt)) {
-                        cnt = 0;
+            if (isCount < 0) {
+                tx.executeSql(sqlDelete, sqlparamCount, 
+                    function (tx, results) {
+                        showStatus("Deleted: " + results.rowsAffected);
+                    },
+                    function(err) { 
+                        //console.log(err);
+                        showStatus("Error",sqlDelete);
                     }
-                    LAST_OFFSET = cnt;
-                    LAST_OFFSET = Math.floor(LAST_OFFSET / limit) * limit;
-                    if (LAST_OFFSET == cnt && LAST_OFFSET > 0) {
-                        LAST_OFFSET = LAST_OFFSET - limit;
+                );
+            } else {
+                tx.executeSql(sqlCount, sqlparamCount, 
+                    function (tx, results) {
+                        var rowIt = rowItem(results.rows,0);
+                        var cnt = parseInt(rowIt["cnt"]);
+                        if (isNaN(cnt)) {
+                            cnt = 0;
+                        }
+                        LAST_OFFSET = cnt;
+                        LAST_OFFSET = Math.floor(LAST_OFFSET / limit) * limit;
+                        if (LAST_OFFSET == cnt && LAST_OFFSET > 0) {
+                            LAST_OFFSET = LAST_OFFSET - limit;
+                        }
+                        document.getElementById("countDiv").innerHTML = rowIt["cnt"];
+                    },
+                    function(err) { 
+                        //console.log(err);
+                        showStatus("Error",sqlCount);
                     }
-                    document.getElementById("countDiv").innerHTML = rowIt["cnt"];
-                },
-                function(err) { 
-                    //console.log(err);
-                    showStatus("Error",sqlCount);
-                }
-            );
+                );
+            }
         }
         
         if (!isCount || isCount && isCount == 2) {
