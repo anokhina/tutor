@@ -242,34 +242,41 @@ h2 {
 .markdown-body table {
     width: 100%;
 }
+.ace-twilight .ace_cursor {
+    color: orange !important;
+}
+.ace_hidden-cursors .ace_cursor {
+    opacity: 0.6 !important;
+}
+
   </style>
 </head>
 <body onload="fullScr()">
 <div id="controls">
     <div id="opstatus">
         <input type="button" value="&nbsp;" onclick="fullScr();" />
-        <input type="button" value="Copy" onclick="editor.focus();document.execCommand('copy');" />
-        <input type="button" value="Cut" onclick="editor.focus();document.execCommand('cut');" />
-        <input type="button" value="Paste" onclick="editor.session.insert(editor.getCursorPosition(), selectedText);editor.focus();" />
-        <input type="button" value="Undo" onclick="editor.focus();editor.undo();" />
-        <input type="button" value="Redo" onclick="editor.focus();editor.redo();" />
+        <input type="button" value="Copy" onclick="editor_focus();document.execCommand('copy');" />
+        <input type="button" value="Cut" onclick="editor_focus();document.execCommand('cut');" />
+        <input type="button" value="Paste" onclick="editor.session.insert(editor.getCursorPosition(), selectedText);editor_focus();" />
+        <input type="button" value="Undo" onclick="editor_focus();editor.undo();" />
+        <input type="button" value="Redo" onclick="editor_focus();editor.redo();" />
         
         <div class="inline">
-        <input type="button" value="&lt&lt" onclick="(selectionMode) ? editor.getSelection().selectFileStart() : editor.gotoLine(0,0); editor.focus();" />
-        <input type="button" value="Home" onclick="(selectionMode) ? editor.getSelection().selectLineStart() : editor.navigateLineStart();editor.focus();" />
-        <input type="button" value="&lt;" onclick="(selectionMode) ? editor.getSelection().selectLeft() : editor.navigateLeft();editor.focus();" />
-        <input type="button" value="&gt;" onclick="(selectionMode) ? editor.getSelection().selectRight() : editor.navigateRight();editor.focus();" />
-        <input type="button" value="&uArr;" onclick="(selectionMode) ? editor.getSelection().selectUp() : editor.navigateUp();editor.focus();" />
-        <input type="button" value="&dArr;" onclick="(selectionMode) ? editor.getSelection().selectDown() : editor.navigateDown();editor.focus();" />
-        <input type="button" value="End" onclick="(selectionMode) ? editor.getSelection().selectLineEnd() : editor.navigateLineEnd();editor.focus();" />
-        <input type="button" value="&gt;&gt;" onclick="(selectionMode) ? editor.getSelection().selectFileEnd() : editor.gotoLine(editor.session.getLength(), Infinity); editor.focus();" />
+        <input type="button" value="&lt&lt" onclick="(selectionMode) ? editor.getSelection().selectFileStart() : editor.gotoLine(0,0); editor_focus();" />
+        <input type="button" value="Home" onclick="(selectionMode) ? editor.getSelection().selectLineStart() : editor.navigateLineStart();editor_focus();" />
+        <input type="button" value="&lt;" onclick="(selectionMode) ? editor.getSelection().selectLeft() : editor.navigateLeft();editor_focus();" />
+        <input type="button" value="&gt;" onclick="(selectionMode) ? editor.getSelection().selectRight() : editor.navigateRight();editor_focus();" />
+        <input type="button" value="&uArr;" onclick="(selectionMode) ? editor.getSelection().selectUp() : editor.navigateUp();editor_focus();" />
+        <input type="button" value="&dArr;" onclick="(selectionMode) ? editor.getSelection().selectDown() : editor.navigateDown();editor_focus();" />
+        <input type="button" value="End" onclick="(selectionMode) ? editor.getSelection().selectLineEnd() : editor.navigateLineEnd();editor_focus();" />
+        <input type="button" value="&gt;&gt;" onclick="(selectionMode) ? editor.getSelection().selectFileEnd() : editor.gotoLine(editor.session.getLength(), Infinity); editor_focus();" />
         </div>
     </div>
     <div class="tab">
       <button class="tablinks" onclick="openTab(event, 'File')" id="defaultOpen">File</button>
       <button class="tablinks" onclick="openTab(event, 'Edit')">Edit</button>
       <button class="tablinks" onclick="openTab(event, 'Code')">Code</button>
-      <button class="tablinks" onclick="editor.focus();editor.execCommand('find');">Find</button>
+      <button class="tablinks" onclick="editor_focus();editor.execCommand('find');">Find</button>
         <div class="inline control">
         <label class="switch">
           <input type="checkbox" onchange="selectionMode=this.checked">
@@ -304,7 +311,7 @@ h2 {
             <div id="editorLen" class="inline"></div>
             Go to:
             <input type="search" 
-                onchange="if(!isNaN(parseInt(this.value))){editor.gotoLine(this.value,0);}editor.focus();"
+                onchange="if(!isNaN(parseInt(this.value))){editor.gotoLine(this.value,0);}editor_focus();"
                 id="gotoLine" name="gotoLine" 
                 size="5" min="1" maxlength="5" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=!isNaN(parseInt(this.value)) ? ((parseInt(this.value) < parseInt(this.min))? (parseInt(this.min)) : parseInt(this.value)) : (this.value == '-') ? '-' : ''"/>
             Paste:<input type="search" name="clipboardDataInp" id="clipboardDataInp" onchange="selectedText=this.value">
@@ -892,7 +899,6 @@ for (var i = 0; i < modes.length; i++) {
     });
     selMode.appendChild(option);
 }
-console.log(modeExt);
 
 var $ = document.getElementById.bind(document);
 var dom = ace.require("ace/lib/dom");
@@ -918,7 +924,8 @@ selMode.value="ace/mode/javascript";
 editor.renderer.setScrollMargin(10, 10);
 editor.setOptions({
     // "scrollPastEnd": 0.8,
-    autoScrollEditorIntoView: true
+    wrap: false,
+    autoScrollEditorIntoView: true    
 });
 editor.$blockScrolling = Infinity;
 editor.getSession().on('change', function() {
@@ -955,7 +962,7 @@ document.getElementById('files1').addEventListener('change',
     function(evt) {
         new UTILIO.FileOpenerText(function(text, f){
             editor.setValue(text, -1); //TODO remember line
-            editor.focus();
+            editor_focus();
             openedFile = f;
             var idx = f.name.lastIndexOf(".");
             if (idx > 0) {
@@ -967,7 +974,15 @@ document.getElementById('files1').addEventListener('change',
             }
         }).handleFileSelect(evt);
     }, false);
-
+function editor_focus() {
+    var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    var small = (/(android)/i.test(userAgent) || /windows phone/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream);
+    console.log(small);
+    if (small) {
+    } else {
+        editor.focus();
+    }
+}
 function exportData() {
     var fileName = "Unnamed";
     if (openedFile) {
@@ -982,6 +997,7 @@ function newFile() {
         openedFile = null;
     }
 }
+window.onbeforeunload = function() { return "Your work will be lost."; };
 </script>
 
 </body>
