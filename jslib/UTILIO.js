@@ -57,7 +57,7 @@ var UTILIO = (function() {
             var reader = new FileReader();
             reader.readAsText (f);
             reader.onload = function(e) {
-                me.textProcessor(reader.result);
+                me.textProcessor(reader.result, f);
             };
         },
         readFile: function(f) {
