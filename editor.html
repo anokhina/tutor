@@ -27,6 +27,7 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
   <style type="text/css" media="screen">
     html, body {
         width:100%;
+        height:100%;
         padding:0px;
         margin:0px;
     }   
@@ -43,7 +44,7 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
         border: 0;
         margin: 0;
         position: fixed !important;
-        top: 30px;
+        top: 65px;
         bottom: 0;
         left: 0;
         right: 0;
@@ -133,6 +134,9 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
     }
     
     .tabcontent {
+        position: absolute;
+        z-index: 1000;
+        width: 100%;        
         display: none;
         padding: 0px;
         border: 1px solid #ccc;
@@ -140,6 +144,10 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
         background-color: #f1f1f1;
     }
     
+    .tcontent {
+        padding: 5px;
+    }
+
     /* Style the close button */
     .topright {
         float: right;
@@ -236,9 +244,10 @@ h2 {
 }
   </style>
 </head>
-<body>
-<div class="controldiv">
+<body onload="fullScr()">
+<div id="controls">
     <div id="opstatus">
+        <input type="button" value="&nbsp;" onclick="fullScr();" />
         <input type="button" value="Copy" onclick="editor.focus();document.execCommand('copy');" />
         <input type="button" value="Cut" onclick="editor.focus();document.execCommand('cut');" />
         <input type="button" value="Paste" onclick="editor.session.insert(editor.getCursorPosition(), selectedText);editor.focus();" />
@@ -806,18 +815,12 @@ h2 {
        
         </div>
     </div>
-    
-    <input type="button" value="Fullscreen" onclick="fullScr();" />
-
-    
 </div>
-<pre id="editor">function foo(items) {
-    var i;
-    for (i = 0; i &lt; items.length; i++) {
-        alert("Ace Rocks " + items[i]);
-    }
-
-}</pre>
+<pre id="editor">
+/*
+Simple text editor with code highlighting
+*/
+</pre>
 
 <script src="ace/src-noconflict/ace.js"></script>
 <script src="ace/src-noconflict/ext-themelist.js"></script>
@@ -894,9 +897,17 @@ console.log(modeExt);
 var $ = document.getElementById.bind(document);
 var dom = ace.require("ace/lib/dom");
 function fullScr() {
+    var controls = document.getElementById("controls");
     var fullScreen = dom.toggleCssClass(document.body, "fullScreen")
     dom.setCssClass(editor.container, "fullScreen", fullScreen)
     editor.setAutoScrollEditorIntoView(!fullScreen)
+    if (fullScreen) {
+        editor.container.style.top = "" + controls.offsetHeight + "px";
+        editor.container.style.height = "auto";
+    } else {
+        editor.container.style.top = "0px";
+        editor.container.style.height = "" + (document.body.offsetHeight - controls.offsetHeight - 0) + "px";
+    }
     editor.resize()
 }
 var editor = ace.edit("editor");
