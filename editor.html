@@ -55,7 +55,7 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
     .fileUploadSpan {
         background-color: buttonface;
     }
-    input[type="search"], select, input[type="button"], button, input[type="file"], .fileUploadSpan {
+    input[type="search"], select, input[type="button"], button:not(.tablinks), input[type="file"], .fileUploadSpan {
         font-size: medium;
         outline: none;
         margin: 2px 0px 0px 0px;
@@ -111,6 +111,7 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
 
     /* Style the buttons inside the tab */
     div.tab button {
+        color: #072df1;
         background-color: inherit;
         float: left;
         border: none;
@@ -156,10 +157,10 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
 .switch {
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 24px;
+  width: 40px;
+  height: 21px;
   margin: 2px;
-  vertical-align: bottom;
+  vertical-align: text-top;
 }
 
 .switch input {display:none;}
@@ -179,8 +180,8 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
 .slider:before {
   position: absolute;
   content: "";
-  height: 16px;
-  width: 16px;
+  height: 14px;
+  width: 14px;
   left: 4px;
   bottom: 4px;
   background-color: white;
@@ -189,17 +190,17 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
 }
 
 input:checked + .slider {
-  background-color: #2196F3;
+  background-color: #267792;
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #2196F3;
+  box-shadow: 0 0 1px #267792;
 }
 
 input:checked + .slider:before {
-  -webkit-transform: translateX(26px);
-  -ms-transform: translateX(26px);
-  transform: translateX(26px);
+  -webkit-transform: translateX(18px);
+  -ms-transform: translateX(18px);
+  transform: translateX(18px);
 }
 
 /* Rounded sliders */
@@ -264,7 +265,8 @@ h2 {
         <label class="switch">
           <input type="checkbox" onchange="selectionMode=this.checked">
           <span class="slider round"></span>
-        </label><div class="inline">Sel</div>
+        </label>
+        <div class="inline">Sel</div>
         </div>
       <button class="tablinks" onclick="openTab(event, 'Help')">Help</button>
         
