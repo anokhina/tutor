@@ -25,6 +25,11 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
   
   <title>Editor</title>
   <style type="text/css" media="screen">
+    html, body {
+        width:100%;
+        padding:0px;
+        margin:0px;
+    }   
     .ace_editor {
         position: relative !important;
         border: 1px solid lightgray;
@@ -51,6 +56,7 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
         background-color: buttonface;
     }
     input[type="search"], select, input[type="button"], button, input[type="file"], .fileUploadSpan {
+        font-size: medium;
         outline: none;
         margin: 2px 0px 0px 0px;
         color: #267792;
@@ -92,72 +98,716 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
         border: medium solid lightgray;
         border-width: thin;
         border-radius: 5px;
-        margin: 2px 0px 0px 0px;
+        display: inline-block;
+        padding: 2px 5px;
+        margin: 2px;
     }
+    /* Style the tab */
+    div.tab {
+        overflow: hidden;
+        border: 1px solid #ccc;
+        background-color: #e5e5e5;
+    }
+
+    /* Style the buttons inside the tab */
+    div.tab button {
+        background-color: inherit;
+        float: left;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        padding: 4px 6px;
+        transition: 0.3s;
+        font-size: large;
+    }
+
+    /* Change background color of buttons on hover */
+    div.tab button:hover {
+        background-color: #ddd;
+    }
+
+    /* Create an active/current tablink class */
+    div.tab button.active {
+        background-color: #ccc;
+    }
+    
+    .tabcontent {
+        display: none;
+        padding: 0px;
+        border: 1px solid #ccc;
+        border-top: none;
+        background-color: #f1f1f1;
+    }
+    
+    /* Style the close button */
+    .topright {
+        float: right;
+        cursor: pointer;
+        font-size: large;
+        padding: 0px 4px 0px 0px;
+    }
+
+    .topright:hover {color: red;}
+
+    #opstatus {
+        /*background-color: #bbb;*/
+    }
+    
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+  margin: 2px;
+  vertical-align: bottom;
+}
+
+.switch input {display:none;}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}    
+
+.control {
+    margin: 0px;
+    vertical-align: bottom;
+    padding: 0px;
+}
+
+/*for help tab*/
+h2 {
+    margin: 0px;
+    padding: 0.83em 0;
+}
+.markdown-body table tr:nth-child(2n) {
+    background-color: #f6f8fa;
+}
+
+.markdown-body table tr {
+    background-color: #fff;
+    border-top: 1px solid #c6cbd1;
+}
+.markdown-body table {
+    width: 100%;
+}
   </style>
 </head>
 <body>
 <div class="controldiv">
-    <div id="editorLen" class="inline"></div>
-    Go to:
-    <input type="search" 
-        onchange="if(!isNaN(parseInt(this.value))){editor.gotoLine(this.value,0);}editor.focus();"
-        id="gotoLine" name="gotoLine" 
-        size="5" min="1" maxlength="5" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=!isNaN(parseInt(this.value)) ? ((parseInt(this.value) < parseInt(this.min))? (parseInt(this.min)) : parseInt(this.value)) : (this.value == '-') ? '-' : ''"/>
+    <div id="opstatus">
+        <input type="button" value="Copy" onclick="editor.focus();document.execCommand('copy');" />
+        <input type="button" value="Cut" onclick="editor.focus();document.execCommand('cut');" />
+        <input type="button" value="Paste" onclick="editor.session.insert(editor.getCursorPosition(), selectedText);editor.focus();" />
+        <input type="button" value="Undo" onclick="editor.focus();editor.undo();" />
+        <input type="button" value="Redo" onclick="editor.focus();editor.redo();" />
+        
+        <div class="inline">
+        <input type="button" value="&lt&lt" onclick="(selectionMode) ? editor.getSelection().selectFileStart() : editor.gotoLine(0,0); editor.focus();" />
+        <input type="button" value="Home" onclick="(selectionMode) ? editor.getSelection().selectLineStart() : editor.navigateLineStart();editor.focus();" />
+        <input type="button" value="&lt;" onclick="(selectionMode) ? editor.getSelection().selectLeft() : editor.navigateLeft();editor.focus();" />
+        <input type="button" value="&gt;" onclick="(selectionMode) ? editor.getSelection().selectRight() : editor.navigateRight();editor.focus();" />
+        <input type="button" value="&uArr;" onclick="(selectionMode) ? editor.getSelection().selectUp() : editor.navigateUp();editor.focus();" />
+        <input type="button" value="&dArr;" onclick="(selectionMode) ? editor.getSelection().selectDown() : editor.navigateDown();editor.focus();" />
+        <input type="button" value="End" onclick="(selectionMode) ? editor.getSelection().selectLineEnd() : editor.navigateLineEnd();editor.focus();" />
+        <input type="button" value="&gt;&gt;" onclick="(selectionMode) ? editor.getSelection().selectFileEnd() : editor.gotoLine(editor.session.getLength(), Infinity); editor.focus();" />
+        </div>
+    </div>
+    <div class="tab">
+      <button class="tablinks" onclick="openTab(event, 'File')" id="defaultOpen">File</button>
+      <button class="tablinks" onclick="openTab(event, 'Edit')">Edit</button>
+      <button class="tablinks" onclick="openTab(event, 'Code')">Code</button>
+      <button class="tablinks" onclick="editor.focus();editor.execCommand('find');">Find</button>
+        <div class="inline control">
+        <label class="switch">
+          <input type="checkbox" onchange="selectionMode=this.checked">
+          <span class="slider round"></span>
+        </label><div class="inline">Sel</div>
+        </div>
+      <button class="tablinks" onclick="openTab(event, 'Help')">Help</button>
+        
+    </div>
+</div>
+<div class="controlleddiv">
+    <div id="File" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <input type="button" onclick="newFile()" value="New"/>
+            <input type="button" onclick="exportData()" value="Save as..."/>
+            
+            <form id="exportForm">
+            <button type="reset" value="Reset" class="Reset">x</button>
+            <input id="uploadFile" placeholder="Open file" disabled="disabled" />
+            <div class="fileUpload">
+            <span class="fileUploadSpan">Open</span><input type="file" id="files1" name="files1[]" onchange="document.getElementById('uploadFile').value = this.value" class="upload"/>
+            </div>
+            </form>    
+        
+        </div>
+    </div>
+    <div id="Edit" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <div id="editorLen" class="inline"></div>
+            Go to:
+            <input type="search" 
+                onchange="if(!isNaN(parseInt(this.value))){editor.gotoLine(this.value,0);}editor.focus();"
+                id="gotoLine" name="gotoLine" 
+                size="5" min="1" maxlength="5" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=!isNaN(parseInt(this.value)) ? ((parseInt(this.value) < parseInt(this.min))? (parseInt(this.min)) : parseInt(this.value)) : (this.value == '-') ? '-' : ''"/>
+            Paste:<input type="search" name="clipboardDataInp" id="clipboardDataInp" onchange="selectedText=this.value">
+            <input type="button" value="Select all" onclick="editor.selectAll();" />
+        </div>
+    </div>
+    <div id="Code" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <div class="inline">Mode:
+            <input type="search" name="entryselMode" id="entryselMode" onKeyUp="findIt(selMode,this.value)">
+            <select name="selMode" id="selMode" onchange="setMode(this)"></select>
+            </div><div class="inline">Theme:
+            <input type="search" name="entryselTheme" id="entryselTheme" onKeyUp="findIt(selTheme,this.value)">
+            <select name="selTheme" id="selTheme"  onchange="setTheme(this)"></select>
+            </div>
+        </div>
+    </div>    
     
-    Paste:<input type="search" name="clipboardDataInp" id="clipboardDataInp" onchange="selectedText=this.value">
     
-    <input type="search" name="entryselMode" id="entryselMode" onKeyUp="findIt(selMode,this.value)">
-    <select name="selMode" id="selMode" onchange="setMode(this)"></select>
-    <input type="search" name="entryselTheme" id="entryselTheme" onKeyUp="findIt(selTheme,this.value)">
-    <select name="selTheme" id="selTheme"  onchange="setTheme(this)"></select>
-    <input type="button" value="Show content" onclick="alert(''+editor.getValue())" />
-    <input type="button" value="Select all" onclick="editor.selectAll();" />
+    <div id="Help" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+    <div id="wiki-body" class="wiki-body gollum-markdown-content instapaper_body">
+        <div class="markdown-body">
+        <a href="https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts" target="newWin">Help source </a>
+          <h2>
+<a id="user-content-line-operations" class="anchor" href="#line-operations" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Line Operations</h2>
+<table>
+<thead>
+<tr>
+<th align="left">Windows/Linux</th>
+<th align="left">Mac</th>
+<th align="left">Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Ctrl-D</td>
+<td align="left">Command-D</td>
+<td align="left">Remove line</td>
+</tr>
+<tr>
+<td align="left">Alt-Shift-Down</td>
+<td align="left">Command-Option-Down</td>
+<td align="left">Copy lines down</td>
+</tr>
+<tr>
+<td align="left">Alt-Shift-Up</td>
+<td align="left">Command-Option-Up</td>
+<td align="left">Copy lines up</td>
+</tr>
+<tr>
+<td align="left">Alt-Down</td>
+<td align="left">Option-Down</td>
+<td align="left">Move lines down</td>
+</tr>
+<tr>
+<td align="left">Alt-Up</td>
+<td align="left">Option-Up</td>
+<td align="left">Move lines up</td>
+</tr>
+<tr>
+<td align="left">Alt-Delete</td>
+<td align="left">Ctrl-K</td>
+<td align="left">Remove to line end</td>
+</tr>
+<tr>
+<td align="left">Alt-Backspace</td>
+<td align="left">Command-Backspace</td>
+<td align="left">Remove to linestart</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Backspace</td>
+<td align="left">Option-Backspace, Ctrl-Option-Backspace</td>
+<td align="left">Remove word left</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Delete</td>
+<td align="left">Option-Delete</td>
+<td align="left">Remove word right</td>
+</tr>
+<tr>
+<td align="left">---</td>
+<td align="left">Ctrl-O</td>
+<td align="left">Split line</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a id="user-content-selection" class="anchor" href="#selection" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Selection</h2>
+<table>
+<thead>
+<tr>
+<th align="left">Windows/Linux</th>
+<th align="left">Mac</th>
+<th align="left">Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Ctrl-A</td>
+<td align="left">Command-A</td>
+<td align="left">Select all</td>
+</tr>
+<tr>
+<td align="left">Shift-Left</td>
+<td align="left">Shift-Left</td>
+<td align="left">Select left</td>
+</tr>
+<tr>
+<td align="left">Shift-Right</td>
+<td align="left">Shift-Right</td>
+<td align="left">Select right</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-Left</td>
+<td align="left">Option-Shift-Left</td>
+<td align="left">Select word left</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-Right</td>
+<td align="left">Option-Shift-Right</td>
+<td align="left">Select word right</td>
+</tr>
+<tr>
+<td align="left">Shift-Home</td>
+<td align="left">Shift-Home</td>
+<td align="left">Select line start</td>
+</tr>
+<tr>
+<td align="left">Shift-End</td>
+<td align="left">Shift-End</td>
+<td align="left">Select line end</td>
+</tr>
+<tr>
+<td align="left">Alt-Shift-Right</td>
+<td align="left">Command-Shift-Right</td>
+<td align="left">Select to line end</td>
+</tr>
+<tr>
+<td align="left">Alt-Shift-Left</td>
+<td align="left">Command-Shift-Left</td>
+<td align="left">Select to line start</td>
+</tr>
+<tr>
+<td align="left">Shift-Up</td>
+<td align="left">Shift-Up</td>
+<td align="left">Select up</td>
+</tr>
+<tr>
+<td align="left">Shift-Down</td>
+<td align="left">Shift-Down</td>
+<td align="left">Select down</td>
+</tr>
+<tr>
+<td align="left">Shift-PageUp</td>
+<td align="left">Shift-PageUp</td>
+<td align="left">Select page up</td>
+</tr>
+<tr>
+<td align="left">Shift-PageDown</td>
+<td align="left">Shift-PageDown</td>
+<td align="left">Select page down</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-Home</td>
+<td align="left">Command-Shift-Up</td>
+<td align="left">Select to start</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-End</td>
+<td align="left">Command-Shift-Down</td>
+<td align="left">Select to end</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-D</td>
+<td align="left">Command-Shift-D</td>
+<td align="left">Duplicate selection</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-P</td>
+<td align="left">---</td>
+<td align="left">Select to matching bracket</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a id="user-content-multicursor" class="anchor" href="#multicursor" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Multicursor</h2>
+<table>
+<thead>
+<tr>
+<th align="left">Windows/Linux</th>
+<th align="left">Mac</th>
+<th align="left">Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Ctrl-Alt-Up</td>
+<td align="left">Ctrl-Option-Up</td>
+<td align="left">Add multi-cursor above</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Alt-Down</td>
+<td align="left">Ctrl-Option-Down</td>
+<td align="left">Add multi-cursor below</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Alt-Right</td>
+<td align="left">Ctrl-Option-Right</td>
+<td align="left">Add next occurrence to multi-selection</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Alt-Left</td>
+<td align="left">Ctrl-Option-Left</td>
+<td align="left">Add previous occurrence to multi-selection</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Alt-Shift-Up</td>
+<td align="left">Ctrl-Option-Shift-Up</td>
+<td align="left">Move multicursor from current line to the line above</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Alt-Shift-Down</td>
+<td align="left">Ctrl-Option-Shift-Down</td>
+<td align="left">Move multicursor from current line to the line below</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Alt-Shift-Right</td>
+<td align="left">Ctrl-Option-Shift-Right</td>
+<td align="left">Remove current occurrence from multi-selection and move to next</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Alt-Shift-Left</td>
+<td align="left">Ctrl-Option-Shift-Left</td>
+<td align="left">Remove current occurrence from multi-selection and move to previous</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-L</td>
+<td align="left">Ctrl-Shift-L</td>
+<td align="left">Select all from multi-selection</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a id="user-content-go-to" class="anchor" href="#go-to" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Go to</h2>
+<table>
+<thead>
+<tr>
+<th align="left">Windows/Linux</th>
+<th align="left">Mac</th>
+<th align="left">Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Left</td>
+<td align="left">Left, Ctrl-B</td>
+<td align="left">Go to left</td>
+</tr>
+<tr>
+<td align="left">Right</td>
+<td align="left">Right, Ctrl-F</td>
+<td align="left">Go to right</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Left</td>
+<td align="left">Option-Left</td>
+<td align="left">Go to word left</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Right</td>
+<td align="left">Option-Right</td>
+<td align="left">Go to word right</td>
+</tr>
+<tr>
+<td align="left">Up</td>
+<td align="left">Up, Ctrl-P</td>
+<td align="left">Go line up</td>
+</tr>
+<tr>
+<td align="left">Down</td>
+<td align="left">Down, Ctrl-N</td>
+<td align="left">Go line down</td>
+</tr>
+<tr>
+<td align="left">Alt-Left, Home</td>
+<td align="left">Command-Left, Home, Ctrl-A</td>
+<td align="left">Go to line start</td>
+</tr>
+<tr>
+<td align="left">Alt-Right, End</td>
+<td align="left">Command-Right, End, Ctrl-E</td>
+<td align="left">Go to line end</td>
+</tr>
+<tr>
+<td align="left">PageUp</td>
+<td align="left">Option-PageUp</td>
+<td align="left">Go to page up</td>
+</tr>
+<tr>
+<td align="left">PageDown</td>
+<td align="left">Option-PageDown, Ctrl-V</td>
+<td align="left">Go to page down</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Home</td>
+<td align="left">Command-Home, Command-Up</td>
+<td align="left">Go to start</td>
+</tr>
+<tr>
+<td align="left">Ctrl-End</td>
+<td align="left">Command-End, Command-Down</td>
+<td align="left">Go to end</td>
+</tr>
+<tr>
+<td align="left">Ctrl-L</td>
+<td align="left">Command-L</td>
+<td align="left">Go to line</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Down</td>
+<td align="left">Command-Down</td>
+<td align="left">Scroll line down</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Up</td>
+<td align="left">---</td>
+<td align="left">Scroll line up</td>
+</tr>
+<tr>
+<td align="left">Ctrl-P</td>
+<td align="left">---</td>
+<td align="left">Go to matching bracket</td>
+</tr>
+<tr>
+<td align="left">---</td>
+<td align="left">Option-PageDown</td>
+<td align="left">Scroll page down</td>
+</tr>
+<tr>
+<td align="left">---</td>
+<td align="left">Option-PageUp</td>
+<td align="left">Scroll page up</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a id="user-content-findreplace" class="anchor" href="#findreplace" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Find/Replace</h2>
+<table>
+<thead>
+<tr>
+<th align="left">Windows/Linux</th>
+<th align="left">Mac</th>
+<th align="left">Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Ctrl-F</td>
+<td align="left">Command-F</td>
+<td align="left">Find</td>
+</tr>
+<tr>
+<td align="left">Ctrl-H</td>
+<td align="left">Command-Option-F</td>
+<td align="left">Replace</td>
+</tr>
+<tr>
+<td align="left">Ctrl-K</td>
+<td align="left">Command-G</td>
+<td align="left">Find next</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-K</td>
+<td align="left">Command-Shift-G</td>
+<td align="left">Find previous</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a id="user-content-folding" class="anchor" href="#folding" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Folding</h2>
+<table>
+<thead>
+<tr>
+<th align="left">Windows/Linux</th>
+<th align="left">Mac</th>
+<th align="left">Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Alt-L, Ctrl-F1</td>
+<td align="left">Command-Option-L, Command-F1</td>
+<td align="left">Fold selection</td>
+</tr>
+<tr>
+<td align="left">Alt-Shift-L, Ctrl-Shift-F1</td>
+<td align="left">Command-Option-Shift-L, Command-Shift-F1</td>
+<td align="left">Unfold</td>
+</tr>
+<tr>
+<td align="left">Alt-0</td>
+<td align="left">Command-Option-0</td>
+<td align="left">Fold all</td>
+</tr>
+<tr>
+<td align="left">Alt-Shift-0</td>
+<td align="left">Command-Option-Shift-0</td>
+<td align="left">Unfold all</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a id="user-content-other" class="anchor" href="#other" aria-hidden="true"><svg aria-hidden="true" class="octicon octicon-link" height="16" version="1.1" viewbox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Other</h2>
+<table>
+<thead>
+<tr>
+<th align="left">Windows/Linux</th>
+<th align="left">Mac</th>
+<th align="left">Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Tab</td>
+<td align="left">Tab</td>
+<td align="left">Indent</td>
+</tr>
+<tr>
+<td align="left">Shift-Tab</td>
+<td align="left">Shift-Tab</td>
+<td align="left">Outdent</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Z</td>
+<td align="left">Command-Z</td>
+<td align="left">Undo</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-Z, Ctrl-Y</td>
+<td align="left">Command-Shift-Z, Command-Y</td>
+<td align="left">Redo</td>
+</tr>
+<tr>
+<td align="left">Ctrl-,</td>
+<td align="left">Command-,</td>
+<td align="left">Show the settings menu</td>
+</tr>
+<tr>
+<td align="left">Ctrl-/</td>
+<td align="left">Command-/</td>
+<td align="left">Toggle comment</td>
+</tr>
+<tr>
+<td align="left">Ctrl-T</td>
+<td align="left">Ctrl-T</td>
+<td align="left">Transpose letters</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Enter</td>
+<td align="left">Command-Enter</td>
+<td align="left">Enter full screen</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-U</td>
+<td align="left">Ctrl-Shift-U</td>
+<td align="left">Change to lower case</td>
+</tr>
+<tr>
+<td align="left">Ctrl-U</td>
+<td align="left">Ctrl-U</td>
+<td align="left">Change to upper case</td>
+</tr>
+<tr>
+<td align="left">Insert</td>
+<td align="left">Insert</td>
+<td align="left">Overwrite</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Shift-E</td>
+<td align="left">Command-Shift-E</td>
+<td align="left">Macros replay</td>
+</tr>
+<tr>
+<td align="left">Ctrl-Alt-E</td>
+<td align="left">---</td>
+<td align="left">Macros recording</td>
+</tr>
+<tr>
+<td align="left">Delete</td>
+<td align="left">---</td>
+<td align="left">Delete</td>
+</tr>
+<tr>
+<td align="left">---</td>
+<td align="left">Ctrl-L</td>
+<td align="left">Center selection</td>
+</tr>
+</tbody>
+</table>
 
-    <input type="button" value="Ctr+Home" onclick="editor.gotoLine(0,0);editor.focus();" />
-    <input type="button" value="Ctr+End" onclick="editor.gotoLine(editor.session.getLength(), 0);editor.navigateLineEnd();editor.focus();" />
-    <input type="button" value="Home" onclick="editor.navigateLineStart();editor.focus();" />
-    <input type="button" value="End" onclick="editor.navigateLineEnd();editor.focus();" />
-    <input type="button" value="&lt;" onclick="editor.navigateLeft();editor.focus();" />
-    <input type="button" value="&gt;" onclick="editor.navigateRight();editor.focus();" />
-    <input type="button" value="&uArr;" onclick="editor.navigateUp();editor.focus();" />
-    <input type="button" value="&dArr;" onclick="editor.navigateDown();editor.focus();" />
+        </div>
+
+    </div>
+
+       
+        </div>
+    </div>
     
-    
-    <input type="button" value="S Ctr+Home" onclick="editor.getSelection().selectFileStart();editor.focus();" />
-    <input type="button" value="S Ctr+End" onclick="editor.getSelection().selectFileEnd();editor.focus();" />
-    <input type="button" value="S Home" onclick="editor.getSelection().selectLineStart();editor.focus();" />
-    <input type="button" value="S End" onclick="editor.getSelection().selectLineEnd();editor.focus();" />
-    <input type="button" value="S &lt;" onclick="editor.getSelection().selectLeft();editor.focus();" />
-    <input type="button" value="S &gt;" onclick="editor.getSelection().selectRight();editor.focus();" />
-    <input type="button" value="S &uArr;" onclick="editor.getSelection().selectUp();editor.focus();" />
-    <input type="button" value="S &dArr;" onclick="editor.getSelection().selectDown();editor.focus();" />
-    
-    <input type="button" value="Copy" onclick="editor.focus();document.execCommand('copy');" />
-    <input type="button" value="Cut" onclick="editor.focus();document.execCommand('cut');" />
-    <input type="button" value="Paste" onclick="editor.session.insert(editor.getCursorPosition(), selectedText);editor.focus();" />
-    <input type="button" value="Undo" onclick="editor.focus();editor.undo();" />
-    <input type="button" value="Redo" onclick="editor.focus();editor.redo();" />
     <input type="button" value="Fullscreen" onclick="fullScr();" />
 
-    <input type="button" value="Find" onclick="editor.focus();editor.execCommand('find');" />
     
-    <input type="button" onclick="exportData()" value="Save as..."/>
-    
-    <form id="exportForm">
-    <table style="width:100%"><tr>
-    <td>
-    <button type="reset" value="Reset" class="Reset">x</button>
-    <input id="uploadFile" placeholder="Open file" disabled="disabled" />
-    <div class="fileUpload">
-    <span class="fileUploadSpan">Open</span><input type="file" id="files1" name="files1[]" onchange="document.getElementById('uploadFile').value = this.value" class="upload"/>
-    </div>
-    </td>
-    </tr>
-    </table>
-    </form>    
-    
-    <input type="button" onclick="newFile()" value="New"/>
 </div>
 <pre id="editor">function foo(items) {
     var i;
@@ -175,6 +825,24 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
 <script type="text/javascript" src="jslib/UTILIO.js"></script>
 
 <script>
+var selectionMode = false;
+function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    if (evt) {
+        evt.currentTarget.className += " active";
+    }
+    window.scrollTo(0, 0);
+}
+
 function findIt(selobj,field_value) {
     for(var i = 0; i < selobj.options.length; i++) {
         if (selobj.options[i].text.startsWith(field_value)) {
