@@ -25,7 +25,20 @@ CKEDITOR.editorConfig = function( config ) {
 	config.plugins = 'dialogui,dialog,about,a11yhelp,dialogadvtab,basicstyles,bidi,blockquote,notification,button,toolbar,clipboard,panelbutton,panel,floatpanel,colorbutton,colordialog,templates,menu,contextmenu,copyformatting,div,resize,elementspath,enterkey,entities,popup,filebrowser,find,fakeobjects,flash,floatingspace,listblock,richcombo,font,forms,format,horizontalrule,htmlwriter,iframe,wysiwygarea,image,indent,indentblock,indentlist,smiley,justify,menubutton,language,link,list,liststyle,magicline,maximize,newpage,pagebreak,pastetext,pastefromword,preview,print,removeformat,save,selectall,showblocks,showborders,sourcearea,specialchar,scayt,stylescombo,tab,table,tabletools,tableselection,undo,lineutils,widgetselection,widget,filetools,notificationaggregator,uploadwidget,uploadimage,wsc,codemirror,fileopen';
 	config.skin = 'moono-lisa';
 
-    config.removeButtons= 'Save';
+//    config.removeButtons = 'Save,Maximize,About,Iframe,Flash,Language,BidiRtl,BidiLtr,Form,Checkbox,Radio,TextField,Textarea,Select,Button,ImageButton,HiddenField,PasteFromWord';
+	config.toolbar = [
+		{ name: 'src', items: [ 'Source', 'searchCode', 'autoFormat', 'CommentSelectedRange', 'UncommentSelectedRange', 'AutoComplete'] },
+		{ name: 'document', items: [ 'FileOpen', 'FileSave', 'NewPage', 'Preview', 'Print', '-', 'Templates' ] },
+		{ name: 'clipboard', items: [ 'Cut', 'Copy', 'Paste', 'PasteText', '-', 'Undo', 'Redo' ] },
+		{ name: 'editing', items: [ 'Find', 'Replace', '-', 'SelectAll'] },
+		{ name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'] },
+		{ name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] },
+		{ name: 'insert', items: [ 'Image', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar', 'PageBreak' ] },
+		{ name: 'tools', items: [ 'ShowBlocks' ] },
+		{ name: 'stylesText', items: [ 'TextColor', 'BGColor', 'Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript' ] },
+		{ name: 'styles', items: [ 'CopyFormatting', 'RemoveFormat', 'Styles', 'Format' ] },
+		{ name: 'stylesFont', items: [ 'Font', 'FontSize' ] },
+	];
     config.toolbarCanCollapse= true;
     config.toolbarStartupExpanded= false;
                     
