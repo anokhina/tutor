@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--
+Copyright 2018 Veronica Anokhina.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>CKEditor</title>
+        <script src="ckeditor/ckeditor.js"></script>
+        <style type="text/css" media="screen">
+        html, body {
+            width:100%;
+            height:100%;
+            padding:0px;
+            margin:0px;
+        }
+        a.cke_toolbox_collapser {
+            width: 22px !important;
+            height: 21px !important;
+            border-radius: 10px !important;
+        }    
+        </style>        
+    </head>
+    <body>
+        <form>
+            <textarea name="editor1" id="editor1" rows="10" cols="80">
+                This is my textarea to be replaced with CKEditor.
+            </textarea>
+            <script>
+                CKEDITOR.replace( 'editor1', {
+                    on: {
+                        'instanceReady': function (evt) { evt.editor.execCommand('maximize');}
+                    },
+                    customConfig: "../cke_cfg/config.js"
+                    
+                    } );
+            </script>
+        </form>
+    </body>
+</html>
