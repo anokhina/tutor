@@ -38,8 +38,8 @@ function Paint() {
 
     //console.log(getComputedStyle(document.getElementById('paint')).getPropertyValue('width'));
 
-    canvas.width = 600;
-    canvas.height = 400;
+    canvas.width = 320;
+    canvas.height = 480;
 
     // only after set width height
     ctx.lineWidth = 3;
@@ -58,11 +58,20 @@ function Paint() {
       mouse.x = e.pageX - this.offsetLeft;
       mouse.y = e.pageY - this.offsetTop;
     }, false);
+    
+    canvas.addEventListener('touchmove', function(e) {
+      mouse.x = e.pageX - this.offsetLeft;
+      mouse.y = e.pageY - this.offsetTop;
+    }, false);
 
-    canvas.addEventListener('mousedown', function(e) {
+
+    var startDraw = function() {
         ctx.beginPath();
         ctx.moveTo(mouse.x, mouse.y);
-     
+    }
+    
+    canvas.addEventListener('mousedown', function(e) {
+        startDraw();
         canvas.addEventListener('mousemove', draw, false);
     }, false);
      
@@ -73,7 +82,21 @@ function Paint() {
     canvas.addEventListener ("mouseout", function() {
         canvas.removeEventListener('mousemove', draw, false);
     }, false);
+
+    
+    canvas.addEventListener('touchstart', function(e) {
+        startDraw();
+        canvas.addEventListener('touchmove', draw, false);
+    }, false);
      
+    canvas.addEventListener('touchend', function() {
+        canvas.removeEventListener('touchmove', draw, false);
+    }, false);
+
+    canvas.addEventListener ("touchcancel", function() {
+        canvas.removeEventListener('touchmove', draw, false);
+    }, false);
+    
     var draw = function() {
         ctx.lineTo(mouse.x, mouse.y);
         ctx.stroke();
