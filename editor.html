@@ -975,6 +975,7 @@ document.getElementById('files1').addEventListener('change',
         }).handleFileSelect(evt);
     }, false);
 function editor_focus() {
+    //TODO main
     var userAgent = navigator.userAgent || navigator.vendor || window.opera;
     var small = (/(android)/i.test(userAgent) || /windows phone/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream);
     console.log(small);
