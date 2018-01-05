@@ -33,6 +33,8 @@ limitations under the License.
     <script>
 function Paint() {
     //read http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app/
+    //canvas.clearRect()
+    //canvas.getUrlData();
     var canvas = document.getElementById('paintCanvas');
     var ctx = canvas.getContext('2d');
 
@@ -52,53 +54,100 @@ function Paint() {
     ctx.fillStyle = "#ffff00";
     ctx.fill();
 
-    var mouse = {x: 0, y: 0};
-     
-    canvas.addEventListener('mousemove', function(e) {
-      mouse.x = e.pageX - this.offsetLeft;
-      mouse.y = e.pageY - this.offsetTop;
-    }, false);
-    
-    canvas.addEventListener('touchmove', function(e) {
-      mouse.x = e.pageX - this.offsetLeft;
-      mouse.y = e.pageY - this.offsetTop;
-    }, false);
+    var startDraw = function(e) {
+        var me = getMousePos(canvas, e);
 
-
-    var startDraw = function() {
+        ctx.moveTo(me.x, me.y);
         ctx.beginPath();
-        ctx.moveTo(mouse.x, mouse.y);
+    }
+    
+    var getMousePos = function(canvas, e) {
+        var rect = canvas.getBoundingClientRect();
+        if (e) {
+            return {x: e.clientX - rect.left, y : e.clientY - rect.top}
+        }
+        return null;
+    }
+    var getMouse = function(e) {
+        var lck = false;
+        var rck = false;
+        if (e) {
+            if (e.which) {
+                lck = (e.which == 1);
+                rck = (e.which == 3);
+            } else if (e.button) {
+                lck = (e.button == 1);
+                rck = (e.button == 2);
+            }
+            if (lck) {
+                startDraw(e);
+                canvas.addEventListener('mousemove', draw, false);
+            }
+        }
+        return {lck: lck, rck: rck };
     }
     
     canvas.addEventListener('mousedown', function(e) {
-        startDraw();
-        canvas.addEventListener('mousemove', draw, false);
+        if (getMouse(e).lck) {
+            startDraw(e);
+            canvas.addEventListener('mousemove', draw, false);
+        }
     }, false);
      
-    canvas.addEventListener('mouseup', function() {
+    canvas.addEventListener('mouseup', function(e) {
         canvas.removeEventListener('mousemove', draw, false);
     }, false);
 
-    canvas.addEventListener ("mouseout", function() {
+    canvas.addEventListener ("mouseout", function(e) {
         canvas.removeEventListener('mousemove', draw, false);
     }, false);
 
     
     canvas.addEventListener('touchstart', function(e) {
-        startDraw();
-        canvas.addEventListener('touchmove', draw, false);
+        makeMouseEvent("mousedown", e);
+        if (e.target == canvas) { e.preventDefault(); }
     }, false);
      
-    canvas.addEventListener('touchend', function() {
-        canvas.removeEventListener('touchmove', draw, false);
+    canvas.addEventListener('touchend', function(e) {
+        makeMouseEvent("mouseup", e);
+        if (e.target == canvas) { e.preventDefault(); }
     }, false);
 
-    canvas.addEventListener ("touchcancel", function() {
-        canvas.removeEventListener('touchmove', draw, false);
+    canvas.addEventListener ("touchcancel", function(e) {
+        makeMouseEvent("mouseout", e);
     }, false);
     
-    var draw = function() {
-        ctx.lineTo(mouse.x, mouse.y);
+    canvas.addEventListener("touchmove", function (e) {
+        makeMouseEvent("mousemove", e);
+        if (e.target == canvas) { e.preventDefault(); }
+    }, false);
+    
+    var makeMouseEvent = function (name, e) {
+        var touch = e.touches[0];
+        var mi = { which : 1 };
+        if (touch) {
+            if (touch.clientX) {
+                mi.clientX = touch.clientX;
+            }
+            if (touch.clientY) {
+                mi.clientY = touch.clientY;
+            }
+        }
+        var mouseEvent = new MouseEvent(name, mi);
+        canvas.dispatchEvent(mouseEvent);
+    }
+
+    var getTouchPos = function(canvas, e) {
+        var rect = canvas.getBoundingClientRect();
+        if (e) {
+            return {x: e.touches[0].clientX - rect.left, y : e.touches[0].clientY - rect.top}
+        }
+        return null;
+    }
+    
+    var draw = function(e) {
+        var me = getMousePos(canvas, e);
+        ctx.lineTo(me.x, me.y);
         ctx.stroke();
     };
 }
