@@ -102,7 +102,7 @@ merge(GRAFFITI.prototype, {
                         }
                         var result = this._r.Recognize(this._points, useProtractor);
                         this.drawText("" + result.Name + " (" + this.round_n_to_d_decimals(result.Score,2) + ").");
-                        if (this._bindInput) {
+                        if (this._bindInput && result.Score > 0.7) {
                             this.insertAtCursor(this._bindInput, result.Name);
                         }
                     } else {
@@ -169,5 +169,62 @@ merge(GRAFFITI.prototype, {
             delCustom : function() {
                 var num = this._r.DeleteUserGestures();
                 alert("All user-defined gestures have been deleted. Only the 1 predefined gesture remains for each of the " + num + " types.");
+            },
+            getGestures: function() {
+                var ret = {};
+                for (var i = 0; i < this._r.Unistrokes.length; i++) {
+                    ret[this._r.Unistrokes[i].Name] = this._r.Unistrokes[i].Points;
+                }
+                return ret;
+            },
+            logGesturesStr: function() {
+                this.log(1, JSON.stringify(this.getGestures()).replace(/],/g, "],\n"));
             }
 });
+
+function Rad2Deg(r) { return (r * 180.0 / Math.PI); }
+
+function ScaleTo(points, size)
+{
+	var B = BoundingBox(points);
+	var newpoints = new Array();
+	for (var i = 0; i < points.length; i++) {
+        var qx = 0, qy = 0;
+        if (B.Width != 0) {
+            var qx = points[i].X * (size / B.Width);
+        } 
+        if (B.Height != 0) {
+            var qy = points[i].Y * (size / B.Height);
+        }
+		newpoints[newpoints.length] = new Point(qx, qy);
+	}
+	return newpoints;
+}
+
+function DistanceAtBestAngle(points, T, a, b, threshold)
+{
+    var maxAngleSize = Deg2Rad(10);
+    b = Deg2Rad(10);
+    a = -b;
+	var x1 = Phi * a + (1.0 - Phi) * b;
+	var f1 = DistanceAtAngle(points, T, x1);
+	var x2 = (1.0 - Phi) * a + Phi * b;
+	var f2 = DistanceAtAngle(points, T, x2);
+	while (Math.abs(b - a) > threshold && Math.abs(x1) < maxAngleSize &&  Math.abs(x2) < maxAngleSize)
+	{
+		if (f1 < f2) {
+			b = x2;
+			x2 = x1;
+			f2 = f1;
+			x1 = Phi * a + (1.0 - Phi) * b;
+			f1 = DistanceAtAngle(points, T, x1);
+		} else {
+			a = x1;
+			x1 = x2;
+			f1 = f2;
+			x2 = (1.0 - Phi) * a + Phi * b;
+			f2 = DistanceAtAngle(points, T, x2);
+		}
+	}
+	return Math.min(f1, f2);
+}
