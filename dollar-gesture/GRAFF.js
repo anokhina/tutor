@@ -9,8 +9,6 @@ function GRAFFITI () {
     this._isDown = null; 
     this._points = null;
     this._r =  null;
-    this._g = null; 
-    this._rc = null;
     this._canvas = null;
     this._useProtractor = null; 
     this._logField = null; 
@@ -25,20 +23,20 @@ merge(GRAFFITI.prototype, {
                 this._points = new Array();
                 this._r = new DollarRecognizer();
 
-                this._rc = this.getCanvasRect(canvas);
-                
-                this._g = canvas.getContext('2d');
-                var _g = this._g ;
+                var _g = this.getGCtx() ;
                 
                 _g.fillStyle = "rgb(0,0,225)";
                 _g.strokeStyle = "rgb(0,0,225)";
                 _g.lineWidth = 3;
                 _g.font = "16px Gentilis";
                 _g.fillStyle = "rgb(255,255,136)";
-                _g.fillRect(0, 0, this._rc.width, 20);
+                _g.fillRect(0, 0, this.getCanvasRect(this._canvas).width, 20);
 
 
                 this._isDown = false;
+            },
+            getGCtx: function() {
+                return this._canvas.getContext('2d');
             },
             bind: function (inp) {
                 this._bindInput = inp;
@@ -56,7 +54,6 @@ merge(GRAFFITI.prototype, {
                 }
                 ret = {x: cx, y: cy, width: w, height: h};
 
-                console.log(ret);
                 return ret;
             },
             getScrollY : function () {
@@ -73,19 +70,21 @@ merge(GRAFFITI.prototype, {
                 document.onselectstart = function() { return false; } // disable drag-select
                 document.onmousedown = function() { return false; } // disable drag-select
                 this._isDown = true;
-                x -= this._rc.x - this.getScrollX();
-                y -= this._rc.y - this.getScrollY();
+                var _rc = this.getCanvasRect(this._canvas);
+                x -= _rc.x - this.getScrollX();
+                y -= _rc.y - this.getScrollY();
                 if (this._points.length > 0)
-                    this._g.clearRect(0, 0, this._rc.width, this._rc.height);
+                    this.getGCtx().clearRect(0, 0, _rc.width, _rc.height);
                 this._points.length = 1; // clear
                 this._points[0] = new Point(x, y);
                 this.drawText("Recording unistroke...");
-                this._g.fillRect(x - 4, y - 3, 9, 9);
+                this.getGCtx().fillRect(x - 4, y - 3, 9, 9);
             },
             mouseMoveEvent : function (x, y) {
                 if (this._isDown) {
-                    x -= this._rc.x - this.getScrollX();
-                    y -= this._rc.y - this.getScrollY();
+                    var _rc = this.getCanvasRect(this._canvas);
+                    x -= _rc.x - this.getScrollX();
+                    y -= _rc.y - this.getScrollY();
                     this._points[this._points.length] = new Point(x, y);
                     this.drawConnectedPoint(this._points.length - 2, this._points.length - 1);
                 }
@@ -132,9 +131,9 @@ merge(GRAFFITI.prototype, {
                 }
             },
             drawText : function(str) {
-                var _g = this._g;
+                var _g = this.getGCtx();
                 _g.fillStyle = "rgb(255,255,136)";
-                _g.fillRect(0, 0, this._rc.width, 20);
+                _g.fillRect(0, 0, this.getCanvasRect(this._canvas).width, 20);
                 _g.fillStyle = "rgb(0,0,255)";
                 _g.fillText(str, 1, 14);
                 this.log(0, str);
@@ -145,7 +144,7 @@ merge(GRAFFITI.prototype, {
                 }
             },
             drawConnectedPoint : function (fromPt, toPt) {
-                var _g = this._g, _points = this._points;
+                var _g = this.getGCtx(), _points = this._points;
                 _g.beginPath();
                 _g.moveTo(_points[fromPt].X, _points[fromPt].Y);
                 _g.lineTo(_points[toPt].X, _points[toPt].Y);
