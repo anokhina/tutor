@@ -9,6 +9,7 @@ all.html
 editor.html 
 events.html 
 htmleditor.html 
+imgConvert.html 
 memoryGame.html 
 paint.html 
 phones.html 
