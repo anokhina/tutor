@@ -127,5 +127,27 @@ var UTIL = (function() {
         return JSON.stringify( obj1, null, 2 );
     };
     
+    self.waitUntil = function(check,onComplete,delay,timeout) {
+        if (check()) {
+            onComplete();
+        } else {
+            if (!delay) delay=100;
+
+            var timeoutPointer;
+            var intervalPointer=setInterval(function () {
+                if (check()) {
+                    clearInterval(intervalPointer);
+                    if (timeoutPointer) clearTimeout(timeoutPointer);
+                    
+                    onComplete();
+                }
+            },delay);
+            
+            if (timeout) timeoutPointer=setTimeout(function () {
+                clearInterval(intervalPointer);
+            },timeout);
+        }
+    };
+    
     return self;
 })();
