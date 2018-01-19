@@ -113,6 +113,16 @@ div.tab button.active {
     margin-top: 5px;
     margin-bottom: 5px;
 }
+#drop_zone {
+    border: 2px dashed #bbb;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+    padding: 25px;
+    text-align: center;
+    color: #bbb;
+}
+
   </style>
 
 <body>
@@ -129,44 +139,39 @@ function newEvent() {
     document.getElementById('ememo').value = "";
     document.getElementById('elen').value = 1;
     document.getElementById('edate').value = document.getElementById('edate').value = new Date().toISOString().substr(0, 10);
+    document.getElementById('etag').value = "";
+    document.getElementById('eurl').value = "";
+    document.getElementById('etags').value = "";
 }
-function addEvent() {
+function readEvent() {
     var ename = document.getElementById('ename').value, 
         ememo = document.getElementById('ememo').value, 
         elen = document.getElementById('elen').value, 
         etag = document.getElementById('etag').value, 
+        etags = document.getElementById('etags').value, 
+        eurl = document.getElementById('eurl').value, 
         edate = document.getElementById('edate').value;//TODO check
     if (edate) {
         edate = new Date(edate).toISOString().substr(0, 10);
     }
-    addEventDB(db, {edate:edate, ename:ename, ememo:ememo, elen:elen, etag:etag});
+    return {edate:edate, ename:ename, ememo:ememo, elen:elen, etag:etag, etags:etags, eurl:eurl};
+}
+function addEvent() {
+    addEventDB(db, readEvent());
     showEvents(db, 2);
 }
 function saveEvent() {
-    var eid = document.getElementById('eid').value, 
-        ename = document.getElementById('ename').value, 
-        ememo = document.getElementById('ememo').value, 
-        elen = document.getElementById('elen').value, 
-        etag = document.getElementById('etag').value, 
-        edate = document.getElementById('edate').value;//TODO check
-    if (edate) {
-        edate = new Date(edate).toISOString().substr(0, 10);
-    }
+    var evt = readEvent();
+    evt.id = document.getElementById('eid').value;
     
-    if (eid && confirm("Save changes for [" + eid + "] " + ename) == true) {
-        saveEventDB(db, {id: eid, edate:edate, ename:ename, ememo:ememo, elen:elen, etag:etag});
+    if (eid && confirm("Save changes for [" + evt.id + "] " + evt.ename) == true) {
+        saveEventDB(db, evt);
         showEvents(db, 2);
     }    
 }
 function delEvent() {
     var eid = document.getElementById('eid').value, 
-        ename = document.getElementById('ename').value, 
-        ememo = document.getElementById('ememo').value, 
-        elen = document.getElementById('elen').value, 
-        edate = document.getElementById('edate').value;//TODO check
-    if (edate) {
-        edate = new Date(edate).toISOString().substr(0, 10);
-    }
+        ename = document.getElementById('ename').value;
     
     if (confirm("Delete [" + eid + "] " + ename) == true) {
         deleteEventDB(db, eid);
@@ -215,6 +220,8 @@ function editEventObj(obj) {
     document.getElementById('ememo').value = obj["ememo"];
     document.getElementById('elen').value = obj["elen"];
     document.getElementById('etag').value = obj["etag"];
+    document.getElementById('etags').value = obj["etags"];
+    document.getElementById('eurl').value = obj["eurl"];
     document.getElementById('edate').value = null;
     try {
         document.getElementById('edate').value = new Date(obj["edate"]).toISOString().substr(0, 10);
@@ -274,14 +281,17 @@ function saveObj2FS(obj, filePrefix) {
     }
     UTILIO.saveAs(UTILIO.text2blob(UTIL.objDB2text(obj)), filePrefix+filenameUname+UTIL.date2text(new Date())+".json");
 }
-function exportData() {
+function exportFoundData() {
     showEvents(db, null, saveObj2FS );
+}
+function exportData() {
+    showChangedEvents(db, null, saveObj2FS );
 }
 function importData(obj) {
     console.log(obj);
     //fillTable(obj);
     if (confirm("Will import data from file? All data to be overwritten") == true) {
-        importTable(obj, 0, []);
+        importTable(obj);
     }
 }
 </script>
@@ -314,6 +324,7 @@ function importData(obj) {
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <div class="tcontent">
             <form id="editForm">
+            <div id="drop_zone">Drop files here</div>
             <table border=0 style="width:100%">
             <tr><td>
             <input type="text" readonly="true" id="eidprefix" name="eidprefix"/>
@@ -323,6 +334,8 @@ function importData(obj) {
             <div class="inline">Length: <input type="text" id="elen" name="elen" value="1" size="4" min="0"  maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=!isNaN(parseInt(this.value)) ? ((parseInt(this.value) < parseInt(this.min))? (parseInt(this.min)) : parseInt(this.value)) : (this.value == '-') ? '-' : ''"/></div>
             <div class="inline">Tag:    <input type="text" id="etag" name="etag"           size="4" min="-1" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=!isNaN(parseInt(this.value)) ? ((parseInt(this.value) < parseInt(this.min))? (parseInt(this.min)) : parseInt(this.value)) : (this.value == '-') ? '-' : ''"/></div>
             <div>Name:</div><input type="text" id="ename" name="ename" style="width:100%"/>
+            <div>Tags:</div><input type="text" id="etags" name="etags" style="width:100%"/>
+            <div>URL:</div><input type="text" id="eurl" name="eurl" style="width:100%"/>
             </td></tr><tr><td><div class="inline-no">Memo: <textarea rows="5" type="text" id="ememo" name="ememo" style="width:100%" ></textarea></div>
             </td></tr><tr><td>
             <input type="button" onclick="delEvent()" value="Del"/>
@@ -332,6 +345,7 @@ function importData(obj) {
             <input type="button" onclick="viewMemo()" value="View memo"/>
             </td></tr>
             </table>
+
             </form>
         </div>
     </div>
@@ -339,7 +353,9 @@ function importData(obj) {
     <div id="Import" class="tabcontent">
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <div class="tcontent">
-            <input type="button" onclick="exportData()" value="Export"/>
+            <input type="button" onclick="exportFoundData()" value="Save found"/>
+            <input type="button" onclick="exportData()" value="Export changed"/>
+            <input type="button" onclick="syncDone(db)" value="Sync done"/>
             <form id="exportForm">
             <table style="width:100%"><tr>
             <td>
@@ -358,13 +374,14 @@ function importData(obj) {
             <form id="searchForm" onsubmit="showEvents(db, 2); return false;">
             <table border=0 style="width:100%"><tr>
             <td>
-            <input type="submit" value="Log">
+            <input type="submit" value="Search">
+            <input type="button" onclick="UTILDB.showTable(db, 'events')" value="Log"/>
             <input type="button" onclick="searchFormReset()" value="Reset"/>
             <input type="button" onclick="showEvents(db, -2)" value="Delete selected"/>
             </td></tr><tr><td>
             <div class="inline">From date: <input type="date" id="fromdate" name="fromdate" /></div>
             <div class="inline">To date: <input type="date" id="todate" name="todate" /></div>
-            <div>Name:</div><input type="text" id="fename" name="fename" style="width:100%" value="test%"/>
+            <div>Name:</div><input type="text" id="fename" name="fename" style="width:100%" value=""/> <!--test%-->
             <div class="inline">Tag: <input type="text" id="fetag" name="fetag" type="number" size="4" min="-1" maxlength="3" oninput="this.value=this.value.slice(0,this.maxLength||1/1);this.value=!isNaN(parseInt(this.value)) ? ((parseInt(this.value) < parseInt(this.min))? (parseInt(this.min)) : parseInt(this.value)) : (this.value == '-') ? '-' : ''"/></div>
             </td></tr><tr><td>
             <input type="button" onclick="document.getElementById('eoffset').value = 0; showEvents(db, 2);" value="Begin>"/>
@@ -398,6 +415,14 @@ function importData(obj) {
 </div>
 
 <script>
+var dropZone = document.getElementById('drop_zone');
+dropZone.addEventListener('dragover', function(evt) {evt.stopPropagation();evt.preventDefault();evt.dataTransfer.dropEffect = 'copy';}, false);
+dropZone.addEventListener('drop', function(evt){
+    UTILIO.handleURLDnD(evt, function(arr) {
+        alert(JSON.stringify(arr));
+    });
+}, false);
+
 newEvent();
 searchFormReset();
 document.getElementById('files1').addEventListener('change', 
@@ -416,6 +441,7 @@ document.getElementById('files1').addEventListener('change',
     var __idprefix = null;
     var db = openDatabase('sevnEvents', '1.0', 'Events db', 20 * 1024 * 1024);
 //UTILDB.dropTables(db, ["events", "idprefix"]);
+//UTILDB.dropTables(db, ["events"]);
 //UTILDB.dropViews(db, ["v_events"]);    
     db.transaction(
     //SELECT ROWID, * FROM events ORDER BY edate DESC, ename ASC
@@ -427,6 +453,14 @@ document.getElementById('files1').addEventListener('change',
                 '   elen INTEGER NOT NULL,'  +
                 '   ename TEXT NOT NULL,' +
                 '   etag INTEGER,' +
+    // 0 deleted
+    // 1 new
+    // 2 changed
+    // 3 synced
+                '   stat INTEGER DEFAULT 1, ' +
+                '   stattime TIMESTAMP DEFAULT current_timestamp, ' +
+                '   etags TEXT, ' +
+                '   eurl TEXT, ' +
                 '   ememo TEXT);'
             );
             transaction.executeSql(
@@ -436,6 +470,7 @@ document.getElementById('files1').addEventListener('change',
             );
         }
     );
+    /*
     db.transaction(
         function(transaction) {
             transaction.executeSql(
@@ -445,12 +480,33 @@ document.getElementById('files1').addEventListener('change',
             );
         }
     );    
+    db.transaction(
+        function(transaction) {
+            transaction.executeSql(
+                'ALTER TABLE events ' +
+                '  ADD COLUMN ' +
+                '    stat INTEGER DEFAULT 1 '
+            );
+        }
+    );    
+    db.transaction(
+        function(transaction) {
+            transaction.executeSql(
+                'ALTER TABLE events ' +
+                '  ADD COLUMN ' +
+                '    stattime TIMESTAMP DEFAULT current_timestamp '
+            );
+        }
+    );
+*/    
     getPrefix(db);
-    
+    //alter table t1 add column status varchar default 'N';
+    //create table tbl1(id int primary key, dt datetime default current_timestamp); CURRENT_TIME, CURRENT_DATE 
 function addEventDB(db, evt /*edate, ename, ememo, elen*/) {
     var id = __idprefix + "-" + UTIL.generateGuid();
     db.transaction(function (tx) {
-        tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen, etag) VALUES (?,?,?,?,?, ?)', [id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag], 
+        tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen, etag, etags, eurl) VALUES (?,?,?,?,?, ?,?,?)', 
+            [id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, evt.etags, evt.eurl], 
             function(transaction, results){ 
                 showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
                 //console.log(results); 
@@ -462,9 +518,10 @@ function addEventDB(db, evt /*edate, ename, ememo, elen*/) {
         );
     });
 }
-function replaceEventDB(db, evt /*{id, edate, ename, ememo, elen}*/, errLines, callback) {
+function replaceEventDB(db, evt, errLines, callback) {
     db.transaction(function (tx) {
-        tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen, etag) VALUES (?,?,?,?,?,?)', [evt.id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag], 
+        tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen, etag, etags, eurl) VALUES (?,?,?,?,?,?,?,?)', 
+            [evt.id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, evt.etags, evt.eurl], 
             function(transaction, results){ 
                 showStatus("Inserted or updated: " + results.rowsAffected + " rows,  id=" + results.insertId);
                 //console.log(results); 
@@ -473,14 +530,40 @@ function replaceEventDB(db, evt /*{id, edate, ename, ememo, elen}*/, errLines, c
             function(err) { 
                 showStatus("Error");
                 console.log(err);
-                saveEventDB(db, evt /*id, edate, ename, ememo, elen*/, errLines, callback);
+                replaceEventDBreplace(db, evt, errLines, callback);
             }
         );
     });
 }
+function replaceEventDBreplace(db, evt, errLines, callback) {
+     db.transaction(function (tx) {
+        tx.executeSql("UPDATE events SET edate = ?, ename = ?, ememo = ?, elen = ?, etag = ?, etags = ?, eurl = ?, stat = 3, stattime=(datetime('now')) WHERE id = ? AND stattime < ?", 
+            [ evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, evt.etags, evt.eurl, evt.id, evt.stattime], 
+            function(transaction, results){ 
+                showStatus("Updated: " + results.rowsAffected);
+                if (results.rowsAffected < 1) {
+                    if (errLines) {
+                        errLines.push({edate:evt.edate, ename:evt.ename, ememo:evt.ememo, elen:evt.elen, etag:evt.etag, etags:evt.etags, eurl:evt.eurl, id: evt.id, stat:evt.stat, stattime:evt.stattime});
+                    }
+                }
+                //console.log(results); 
+                if (callback) callback();
+            }, 
+            function(err) { 
+                showStatus("Error");
+                if (errLines) {
+                    errLines.push({edate:evt.edate, ename:evt.ename, ememo:evt.ememo, elen:evt.elen, etag:evt.etag, etags:evt.etags, eurl:evt.eurl, id: evt.id, stat:evt.stat, stattime:evt.stattime});
+                }
+                //console.log(err);
+                if (callback) callback();
+            }
+        );
+     });
+}    
 function saveEventDB(db, evt /*id, edate, ename, ememo, elen*/, errLines, callback) {
      db.transaction(function (tx) {
-        tx.executeSql('UPDATE events SET edate = ?, ename = ?, ememo = ?, elen = ?, etag = ? WHERE id = ? ', [ evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, evt.id], 
+        tx.executeSql("UPDATE events SET edate = ?, ename = ?, ememo = ?, elen = ?, etag = ?, etags = ?, eurl = ?, stat = 2, stattime=(datetime('now')) WHERE id = ? ", 
+            [ evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, evt.etags, evt.eurl, evt.id], 
             function(transaction, results){ 
                 showStatus("Updated: " + results.rowsAffected);
                 //console.log(results); 
@@ -499,7 +582,7 @@ function saveEventDB(db, evt /*id, edate, ename, ememo, elen*/, errLines, callba
 }    
 function saveEventDBTag(db, evt /*id, edate, ename, ememo, elen*/, errLines, callback) {
      db.transaction(function (tx) {
-        tx.executeSql('UPDATE events SET etag = ? WHERE id = ? ', [ evt.etag, evt.id], 
+        tx.executeSql("UPDATE events SET etag = ?, stat = 2, stattime=(datetime('now')) WHERE id = ? ", [ evt.etag, evt.id], 
             function(transaction, results){ 
                 showStatus("Updated: " + results.rowsAffected);
                 //console.log(results); 
@@ -516,7 +599,65 @@ function saveEventDBTag(db, evt /*id, edate, ename, ememo, elen*/, errLines, cal
         );
      });
 }    
+
+function syncDone(db, callback) {
+    deleteEventDBStat0(db, function(){
+        saveEventDBStat(db, callback);
+    });
+}
+
+function saveEventDBStat(db, callback) {
+     db.transaction(function (tx) {
+        tx.executeSql("UPDATE events SET stat = 3, stattime=(datetime('now')) WHERE stat in (1, 2) ", [ ], 
+            function(transaction, results){ 
+                showStatus("Updated: " + results.rowsAffected);
+                //console.log(results); 
+                if (callback) callback();
+            }, 
+            function(err) { 
+                showStatus("Error");
+                //console.log(err);
+                if (callback) callback();
+            }
+        );
+     });
+}    
+
+function deleteEventDBStat0(db, callback) {
+     db.transaction(function (tx) {
+        tx.executeSql('DELETE FROM events WHERE stat = 0 ', [], 
+            function(transaction, results){ 
+                showStatus("Deleted: " + results.rowsAffected);
+                //console.log(results); 
+                if (callback) callback();
+            }, 
+            function(err) { 
+                showStatus("Error");
+                //console.log(err);
+                if (callback) callback();
+            }
+        );
+     });
+}
 function deleteEventDB(db, id) {
+     db.transaction(function (tx) {
+        tx.executeSql("UPDATE events SET stat = 0, stattime=(datetime('now')) WHERE id = ? ", [ id], 
+            function(transaction, results){ 
+                showStatus("Updated: " + results.rowsAffected);
+                //console.log(results); 
+                if (callback) callback();
+            }, 
+            function(err) { 
+                showStatus("Error");
+                if (errLines) {
+                    errLines.push({id: id});
+                }
+                //console.log(err);
+                if (callback) callback();
+            }
+        );
+     });
+        /*
      db.transaction(function (tx) {
         tx.executeSql('DELETE FROM events WHERE id = ? ', [id], 
             function(transaction, results){ 
@@ -529,20 +670,31 @@ function deleteEventDB(db, id) {
             }
         );
      });
+     */
 }
 
-function importTable(results_rows, i, errLines) {
-    //ename, ememo, id, elen, pdate, edate, dlen
-    if (i < results_rows.length) {
-        var rowIt = rowItem(results_rows,i);
-        replaceEventDB(db, rowIt/*["id"], rowIt["edate"], rowIt["ename"], rowIt["ememo"], rowIt["elen"]*/, errLines, function() {
-            importTable(results_rows, i+1, errLines)
-        });
-    } else {
-        if (errLines && errLines.length > 0) {
-            saveObj2FS(toObject(errLines), "importError");
+function importTable(results_rows) {
+    var ctx = { done:true, i:0 }, errLines = [];
+    var intervalPointer=setInterval(function () {
+        if (ctx.i < results_rows.length) {
+            if (ctx.done) {
+                var rowIt = rowItem(results_rows, ctx.i);
+                ctx.done = false;
+                replaceEventDB(db, rowIt, errLines, function() {
+                    ctx.i = ctx.i + 1;
+                    ctx.done = true;
+                });
+            }
         }
-    }
+        if (ctx.done) {
+            debugger;
+            clearInterval(intervalPointer);
+            
+            if (errLines && errLines.length > 0) {
+                saveObj2FS(UTIL.toObject(errLines), "importError");
+            }
+        }
+    }, 100);
 }
 function fillTable(results_rows) {
     var len = results_rows.length,
@@ -556,7 +708,7 @@ function fillTable(results_rows) {
     }
 
     //ename, ememo, id, elen, pdate, edate, dlen
-    var columnNames = {id: "", etag:"", edate: "", dlen: "", ename: "", elen: "", ememo: ""};
+    var columnNames = {id: "", etag:"", edate: "", dlen: "", ename: "", elen: "", ememo: "", eurl: "", etags: ""};
     var trow = 0;
     var row;
     for (var i = 0; i < len; i++) {
@@ -582,7 +734,7 @@ function fillTable(results_rows) {
                     cell.appendChild(element);
                     element.innerHTML = UTIL.escapeHTML(p);
                 }
-                if (p == "ename" || p == "ememo" || p == "id" || p == "edate" || p == "etag") {} else {
+                if (isWideColumn(p)) {} else {
                     cell.style.width = "1%";
                 }
             }
@@ -645,7 +797,7 @@ function fillTable(results_rows) {
                 }
                 cell.appendChild(element);
             }
-            if (p == "ename" || p == "ememo" || p == "id" || p == "edate" || p == "etag") {} else {
+            if (isWideColumn(p)) {} else {
                 cell.style.width = "1%";
             }
             if (p == "ememo") {
@@ -657,6 +809,9 @@ function fillTable(results_rows) {
 
         //console.log(i, results_rows.item(i));
     }
+}
+function isWideColumn(p) {
+    return (p == "ename" || p == "ememo" || p == "id" || p == "edate" || p == "etag" || p == "etags" || p == "eurl");
 }
 function setFrameSize(frame) {
     frame.style.height=frame.contentDocument.body.scrollHeight +'px';
@@ -681,7 +836,7 @@ function processById(db, id, callback) {
         tx.executeSql(sql, [id], 
             function (tx, results) {
                 var len = results.rows.length;
-                var obj = { id: "", ename: "", ememo: "", elen: "", edate: "", etag: ""};
+                var obj = { id: "", ename: "", ememo: "", elen: "", edate: "", etag: "", etags: "", eurl: ""};
                 if (len > 0) {
                     var rowIt = rowItem(results.rows,0);
                     obj.id = rowIt.id;
@@ -690,6 +845,8 @@ function processById(db, id, callback) {
                     obj.elen = rowIt.elen;
                     obj.edate = rowIt.edate;
                     obj.etag = rowIt.etag;
+                    obj.etags = rowIt.etags;
+                    obj.eurl = rowIt.eurl;
                 }
                 callback(obj);
             },
@@ -733,61 +890,62 @@ function showEvents(db, isCount, callback) {
             date1, date2, date1, date2];
         var sqlBasic = 
 "WITH jt1 AS " + "\n" +
-"(SELECT etag, ename, ememo, id, elen, l AS pdate, r AS edate, CAST ((julianday(r)-julianday(l)) AS INTEGER) AS dlen FROM ( " + "\n" +
-" SELECT etag, ename, ememo, id, elen, l, min(r) AS r FROM ( " + "\n" +
+"(SELECT etag, ename, ememo, etags, eurl, id, elen, l AS pdate, r AS edate, CAST ((julianday(r)-julianday(l)) AS INTEGER) AS dlen FROM ( " + "\n" +
+" SELECT etag, ename, ememo, etags, eurl, id, elen, l, min(r) AS r FROM ( " + "\n" +
 //FAKE
-" SELECT '' AS etag, ename, edate AS l, ? AS r , 'FAKE' AS ememo, '' as id, '' AS elen FROM events " +  "\n" +
-" WHERE " +  "\n" +
+" SELECT '' AS etag, ename, edate AS l, ? AS r , 'FAKE' AS ememo, '' as etags, '' as eurl, '' as id, '' AS elen FROM events " +  "\n" +
+" WHERE stat != 0 AND " +  "\n" +
 " ? >= ? AND ? <= ? AND edate < ? AND edate >= ? AND edate <= ? "+  "\n" +
 " UNION ALL " +  "\n" + //FAKE
-" SELECT t2.etag, t1.ename, t1.edate AS l, t2.edate AS r, t2.ememo, t2.id, t2.elen "+ "\n" +
+" SELECT t2.etag, t1.ename, t1.edate AS l, t2.edate AS r, t2.ememo, t2.etags, t2.eurl, t2.id, t2.elen "+ "\n" +
 "  FROM events t1 "+ "\n" +
 "  JOIN events t2 "+ "\n" +
 "    ON (t1.ename = t2.ename) "+ "\n" +
-" WHERE t1.edate < t2.edate AND t1.edate >= ? AND t2.edate <= ? "+ "\n" +
+" WHERE t1.stat != 0 AND t2.stat != 0 AND t1.edate < t2.edate AND t1.edate >= ? AND t2.edate <= ? "+ "\n" +
 " ) GROUP BY ename, l "+ "\n" +
 " )) " + "\n" +
 " SELECT * FROM jt1 " + "\n" +
 " UNION ALL " + "\n" +
-" SELECT etag, ename, ememo, id, elen, '' AS pdate, edate, 0 AS dlen FROM events " + "\n" +
-" WHERE id NOT IN (SELECT id FROM jt1) AND edate BETWEEN ? AND ? " + "\n" +
+" SELECT etag, ename, ememo, etags, eurl, id, elen, '' AS pdate, edate, 0 AS dlen FROM events " + "\n" +
+" WHERE stat != 0 AND id NOT IN (SELECT id FROM jt1) AND edate BETWEEN ? AND ? " + "\n" +
 " ORDER BY edate DESC, ename ASC "+  "\n";
+        var columnParamName = "ename";
         if (fename || fetag) {
                 sqlparam = [date, fename, date, date1, date, date2, date, date1, date2,
                     fename, date1, date2, date1, date2, fename, limit, offset];
                 sqlparamCount = [date, fename, date, date1, date, date2, date, date1, date2,
                     fename, date1, date2, date1, date2, fename];
-                var fenameSql = " ename LIKE ? ";
-                var fenameSql1 = " t2.ename LIKE ? ";
+                var fenameSql = " "+columnParamName+" LIKE ? ";
+                var fenameSql1 = " t2."+columnParamName+" LIKE ? ";
 sqlBasic = 
 "WITH jt1 AS " + "\n" +
-"(SELECT etag, ename, ememo, id, elen, l AS pdate, r AS edate, CAST ((julianday(r)-julianday(l)) AS INTEGER) AS dlen FROM ( " + "\n" +
-" SELECT etag, ename, ememo, id, elen, l, min(r) AS r FROM ( " +  "\n" +
+"(SELECT etag, ename, ememo, etags, eurl, id, elen, l AS pdate, r AS edate, CAST ((julianday(r)-julianday(l)) AS INTEGER) AS dlen FROM ( " + "\n" +
+" SELECT etag, ename, ememo, etags, eurl, id, elen, l, min(r) AS r FROM ( " +  "\n" +
 //FAKE
-" SELECT '' AS etag, ename, edate AS l, ? AS r , 'FAKE' AS ememo, '' as id, '' AS elen FROM events " +  "\n" +
-" WHERE " + fenameSql + "\n" +
+" SELECT '' AS etag, ename, edate AS l, ? AS r , 'FAKE' AS ememo, '' as etags, '' as eurl, '' as id, '' AS elen FROM events " +  "\n" +
+" WHERE stat != 0 AND " + fenameSql + "\n" +
 " AND " +  "\n" +
 " ? >= ? AND ? <= ? AND edate < ? AND edate >= ? AND edate <= ? "+  "\n" +
 " UNION ALL " +  "\n" +//FAKE
-" SELECT t2.etag, t1.ename, t1.edate AS l, t2.edate AS r, t2.ememo, t2.id, t2.elen "+ "\n" +
+" SELECT t2.etag, t1.ename, t1.edate AS l, t2.edate AS r, t2.ememo, t2.etags, t2.eurl, t2.id, t2.elen "+ "\n" +
 "  FROM events t1 "+ "\n" +
 "  JOIN events t2 "+ "\n" +
 "    ON (t1.ename = t2.ename) AND "+ fenameSql1 + "\n" +
-" WHERE t1.edate < t2.edate AND t1.edate >= ? AND t2.edate <= ? "+ "\n" +
+" WHERE t1.stat != 0 AND t2.stat != 0 AND t1.edate < t2.edate AND t1.edate >= ? AND t2.edate <= ? "+ "\n" +
 " ) GROUP BY ename, l "+ "\n" +
 " )) " + "\n" +
 " SELECT * FROM jt1 " + "\n" +
 " UNION ALL " + "\n" +
-" SELECT etag, ename, ememo, id, elen, '' AS pdate, edate, 0 AS dlen FROM events " + "\n" +
-" WHERE id NOT IN (SELECT id FROM jt1) AND edate BETWEEN ? AND ? AND " + fenameSql + "\n" +
+" SELECT etag, ename, ememo, etags, eurl, id, elen, '' AS pdate, edate, 0 AS dlen FROM events " + "\n" +
+" WHERE stat != 0 AND id NOT IN (SELECT id FROM jt1) AND edate BETWEEN ? AND ? AND " + fenameSql + "\n" +
 " ORDER BY edate DESC, ename ASC "+  "\n";
         }
         var sql = sqlBasic + " LIMIT ? OFFSET ? ";
         var sqlCount = "SELECT count(*) AS cnt FROM (" + sqlBasic + ")";
-        var sqlDelete = "DELETE FROM events WHERE id IN (SELECT DISTINCT id FROM (" + sqlBasic + "))";
+        var sqlDelete = "UPDATE events SET stat = 0, stattime=(datetime('now')) WHERE id IN (SELECT DISTINCT id FROM (" + sqlBasic + "))";
         if (fetag) {
             sql = "SELECT * FROM (" + sqlBasic + ") WHERE etag = ? LIMIT ? OFFSET ? ";
-            sqlDelete = "DELETE FROM events WHERE id IN (SELECT DISTINCT id FROM (" + sqlBasic + ") WHERE etag = ?)";
+            sqlDelete = "UPDATE events SET stat = 0, stattime=(datetime('now')) WHERE id IN (SELECT DISTINCT id FROM (" + sqlBasic + ") WHERE etag = ?)";
             sqlCount = "SELECT count(*) as cnt FROM (" + sqlBasic + ") WHERE etag = ? ";
             sqlparam = [date, fename, date, date1, date, date2, date, date1, date2,
                 fename, date1, date2, date1, date2, fename, parseInt(fetag), limit, offset];
@@ -845,7 +1003,71 @@ sqlBasic =
             );
         }
     });
-}    
+}
+function showChangedEvents(db, isCount, callback) {
+    fillTable({length: 0});
+    db.transaction(function (tx) {
+        //date(l/1000,'unixepoch','localtime') //sqlite ms to date
+        var date = new Date().toISOString().substr(0, 10); //TODO UTC
+
+        var limit = parseInt(document.getElementById('elimit').value), 
+            offset = parseInt(document.getElementById('eoffset').value);
+        if (isNaN(limit) || limit <= 0) {
+            limit = 1;
+        }
+        if (isNaN(offset) || offset < 0) {
+            offset = 0;
+        }
+        var sqlparam = [limit, offset];
+        var sqlparamCount = [];
+            
+        var sqlBasic = "select * from events where stat in (0, 1, 2) order by stat, edate "
+        
+        var sql = sqlBasic + " LIMIT ? OFFSET ? ";
+        
+        var sqlCount = "SELECT count(*) AS cnt FROM (" + sqlBasic + ")";
+
+        if (isCount) {
+            if (isCount > 0) {
+                tx.executeSql(sqlCount, sqlparamCount, 
+                    function (tx, results) {
+                        var rowIt = rowItem(results.rows,0);
+                        var cnt = parseInt(rowIt["cnt"]);
+                        if (isNaN(cnt)) {
+                            cnt = 0;
+                        }
+                        LAST_OFFSET = cnt;
+                        LAST_OFFSET = Math.floor(LAST_OFFSET / limit) * limit;
+                        if (LAST_OFFSET == cnt && LAST_OFFSET > 0) {
+                            LAST_OFFSET = LAST_OFFSET - limit;
+                        }
+                        document.getElementById("countDiv").innerHTML = rowIt["cnt"];
+                    },
+                    function(err) { 
+                        //console.log(err);
+                        showStatus("Error",sqlCount);
+                    }
+                );
+            }
+        }
+        
+        if (!isCount || isCount && isCount == 2) {
+            tx.executeSql(sql, sqlparam, 
+                function (tx, results) {
+                    if (callback) {
+                        callback(results.rows);
+                    } else {
+                        fillTable(results.rows)
+                    }
+                },
+                function(err) { 
+                    //console.log(err);
+                    showStatus("Error", sql);
+                }
+            );
+        }
+    });
+}
 function getPrefix(db) {
     db.transaction(function (tx) {
         tx.executeSql('SELECT name FROM idprefix WHERE id = 1', [], 
