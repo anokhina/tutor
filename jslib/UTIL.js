@@ -78,6 +78,20 @@ var UTIL = (function() {
         return __escape.textContent;
     };
     
+    self.shortStr = function(str, maxLen, strExtra) {
+        if (maxLen > 0 && str && str.length > maxLen) {
+            return str.substr(0, Math.min(str.length, maxLen)) + strExtra;
+        }
+        return str;
+    };
+    
+    self.toEmpty = function(o) {
+        if (o === null || o === undefined) {
+            return "";
+        }
+        return o;
+    };
+    
     self.parseDate = function (str) {
         if (str) {
             str = str.trim();

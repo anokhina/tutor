@@ -155,9 +155,20 @@ var UTILIO = (function() {
             }
         }
         
-    }
+    };
     
-    
+    self.getFileTitle = function(txt, exts) {
+        if (txt) {
+            var lowTxt = txt.toLowerCase();
+            for (var i = 0; i < exts.length; i++) {
+                var ext = exts[i];
+                if (lowTxt.endsWith(ext)) {
+                    return txt.substring(0, txt.length - ext.length);
+                }
+            }
+        }
+        return txt;
+    };
     
     return self;
 })();
