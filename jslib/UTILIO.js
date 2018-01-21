@@ -135,7 +135,7 @@ var UTILIO = (function() {
                 urlObj.url = lines[j].substring(4);
             } else 
             if (lines[j].startsWith("Comment=")) {
-                urlObj.comment = lines[j].substring(7);
+                urlObj.comment = lines[j].substring(8);
             } 
         }
         return urlObj;
