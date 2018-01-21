@@ -133,7 +133,7 @@ div.tab button.active {
 
 <script>
 
-function newEvent() {
+function newEvent() { //TODO ask
     document.getElementById('eid').value = "";
     document.getElementById('ename').value = "";
     document.getElementById('ememo').value = "";
@@ -375,6 +375,7 @@ function importData(obj) {
             <table border=0 style="width:100%"><tr>
             <td>
             <input type="submit" value="Search">
+            <input type="button" onclick="showTags(db)" value="Tags"/>
             <input type="button" onclick="UTILDB.showTable(db, 'events')" value="Log"/>
             <input type="button" onclick="searchFormReset()" value="Reset"/>
             <input type="button" onclick="showEvents(db, -2)" value="Delete selected"/>
@@ -436,13 +437,20 @@ function importData(obj) {
 });
 
 
+function etags2(str) {
+    if (str) {
+        var eventTagsArr = str.split(" ");
+        eventTagsArr = eventTagsArr.sort();
+        return eventTagsArr.join(" ").trim();
+    }
+    return str;
+}
+
 var dropZone = document.getElementById('drop_zone');
 dropZone.addEventListener('dragover', function(evt) {evt.stopPropagation();evt.preventDefault();evt.dataTransfer.dropEffect = 'copy';}, false);
 dropZone.addEventListener('drop', function(evt){
     UTILIO.handleURLDnD(evt, function(arr) {
-        var eventTagsArr = document.getElementById('etags').value.split(" "); //TODO sort it
-        eventTagsArr = eventTagsArr.sort();
-        var eventTags = eventTagsArr.join(" ").trim();
+        var eventTags = document.getElementById('etags').value;
         var now = UTIL.parseDate(new Date().toString());
         var events = [];
         for (var i = 0; i < arr.length; i++) {
@@ -464,11 +472,11 @@ dropZone.addEventListener('drop', function(evt){
                 events.push(evt);
             }
         }
-        if (events.length > 0 && confirm("Will be imported " + events.length + " events with tags " + eventTags) == false) {
+        if (events.length > 0 && confirm("Will be imported " + events.length + " events with tags: " + eventTags) == false) {
             return;
         }
 
-        alert(JSON.stringify(events));
+        //alert(JSON.stringify(events));
 
         var ctx = { done:true, i:0 }, errLines = [];
         var intervalPointer=setInterval(function () {
@@ -511,7 +519,7 @@ document.getElementById('files1').addEventListener('change',
     }, false);
 
     var __idprefix = null;
-    var db = openDatabase('sevnEvents', '1.0', 'Events db', 20 * 1024 * 1024);
+    var db = openDatabase('sevnUrlEvents', '1.0', 'Events db', 20 * 1024 * 1024);
 //UTILDB.dropTables(db, ["events", "idprefix"]);
 //UTILDB.dropTables(db, ["events"]);
 //UTILDB.dropViews(db, ["v_events"]);    
@@ -578,7 +586,7 @@ function addEventDB(db, evt /*edate, ename, ememo, elen*/, errors, callback) {
     var id = __idprefix + "-" + UTIL.generateGuid();
     db.transaction(function (tx) {
         tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen, etag, etags, eurl) VALUES (?,?,?,?,?, ?,?,?)', 
-            [id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, evt.etags, evt.eurl], 
+            [id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, etags2(evt.etags), evt.eurl], 
             function(transaction, results){ 
                 showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
                 //console.log(results); 
@@ -596,7 +604,7 @@ function addEventDB(db, evt /*edate, ename, ememo, elen*/, errors, callback) {
 function replaceEventDB(db, evt, errLines, callback) {
     db.transaction(function (tx) {
         tx.executeSql('INSERT INTO events (id, edate, ename, ememo, elen, etag, etags, eurl) VALUES (?,?,?,?,?,?,?,?)', 
-            [evt.id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, evt.etags, evt.eurl], 
+            [evt.id, evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, etags2(evt.etags), evt.eurl], 
             function(transaction, results){ 
                 showStatus("Inserted or updated: " + results.rowsAffected + " rows,  id=" + results.insertId);
                 //console.log(results); 
@@ -613,7 +621,7 @@ function replaceEventDB(db, evt, errLines, callback) {
 function replaceEventDBreplace(db, evt, errLines, callback) {
      db.transaction(function (tx) {
         tx.executeSql("UPDATE events SET edate = ?, ename = ?, ememo = ?, elen = ?, etag = ?, etags = ?, eurl = ?, stat = 3, stattime=(datetime('now')) WHERE id = ? AND stattime < ?", 
-            [ evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, evt.etags, evt.eurl, evt.id, evt.stattime], 
+            [ evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, etags2(evt.etags), evt.eurl, evt.id, evt.stattime], 
             function(transaction, results){ 
                 showStatus("Updated: " + results.rowsAffected);
                 if (results.rowsAffected < 1) {
@@ -638,7 +646,7 @@ function replaceEventDBreplace(db, evt, errLines, callback) {
 function saveEventDB(db, evt /*id, edate, ename, ememo, elen*/, errLines, callback) {
      db.transaction(function (tx) {
         tx.executeSql("UPDATE events SET edate = ?, ename = ?, ememo = ?, elen = ?, etag = ?, etags = ?, eurl = ?, stat = 2, stattime=(datetime('now')) WHERE id = ? ", 
-            [ evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, evt.etags, evt.eurl, evt.id], 
+            [ evt.edate, evt.ename, evt.ememo, evt.elen, evt.etag, etags2(evt.etags), evt.eurl, evt.id], 
             function(transaction, results){ 
                 showStatus("Updated: " + results.rowsAffected);
                 //console.log(results); 
@@ -886,6 +894,10 @@ function fillTable(results_rows) {
                 var obj = {};
                 obj.id = rowIt.id;
                 cell.setAttribute("onclick", "showHtml("+JSON.stringify(obj)+")");
+            }
+            if (p == "etags") {
+                var obj = { value: cellVal, columnParamName: "etags"};
+                cell.setAttribute("onclick", "showTag("+JSON.stringify(obj)+")");                
             }
         }
 
@@ -1191,6 +1203,96 @@ function getPrefix(db) {
         );
     });
 }    
+    function showTags(db) {
+        db.transaction(function (tx) {
+            tx.executeSql('SELECT DISTINCT etags FROM events ORDER BY etags', [], 
+                function (tx, results) {
+                    var len = results.rows.length;
+                    var msg = "<p>Found rows: " + len + "</p>";
+                    console.log(msg);
+                    fillSimpleTable(results.rows);
+            
+                    for (var i = 0; i < len; i++) {
+                        console.log(i, results.rows.item(i));
+                    }
+                },
+                function(err) { 
+                    console.log(err);
+                }
+            );
+        });
+    };
+    function fillSimpleTable(results_rows) {
+        var len = results_rows.length;
+                    
+        var table = document.getElementById("eventListTable");
+        while(table.rows.length > 0) {
+            table.deleteRow(0);
+        }
+
+        var columnNames = {etags: ""};
+        var trow = 0;
+        var row;
+        for (var i = 0; i < len; i++) {
+            row = table.insertRow(trow++);
+            if (i == 0) {
+                row.classList.add("rowbg");
+
+                var j = 0;
+                
+                var cellNum = row.insertCell(j);
+                j++;
+                var element = document.createTextNode("N");
+                cellNum.appendChild(element);
+                cellNum.style.width = "25px";
+                cellNum.style.minWidth = "25px";
+                
+                for (var p in columnNames) {
+                    if (p == "id") {
+                    } else {
+                        var cell = row.insertCell(j);
+                        j++;
+                        var element = document.createElement("div");
+                        cell.appendChild(element);
+                        element.innerHTML = UTIL.escapeHTML(p);
+                    }
+                }
+                row = table.insertRow(trow++);
+            }
+            row.classList.add("rowbgl");
+            
+            var j = 0;
+            
+            var cellNum = row.insertCell(j);
+            j++;
+            var element = document.createTextNode("" + (i+1));
+            cellNum.appendChild(element);
+            cellNum.style.width = "25px";
+            cellNum.style.minWidth = "25px";
+            
+            var rowIt = rowItem(results_rows,i);
+            for (var p in columnNames) {
+                var cell = row.insertCell(j);
+                j++;
+                var element = document.createElement("div");
+                var cellVal = rowIt[p];
+                element.innerHTML = UTIL.escapeHTML(cellVal);
+                cell.appendChild(element);
+                
+                var obj = { value: cellVal, columnParamName: "etags"};
+                cellNum.setAttribute("onclick", "showTag("+JSON.stringify(obj)+")");                
+            }
+        }
+    }
+    
+    function showTag(obj) {
+        document.getElementById('fsename').value = obj.columnParamName;
+        document.getElementById('fename').value = obj.value;
+        showEvents(db, 2);
+        newEvent();
+        document.getElementById('etags').value = obj.value;
+    }
+
 showEvents(db, 2);
 </script>
 </body>
