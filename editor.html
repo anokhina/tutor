@@ -86,8 +86,9 @@ https://github.com/ajaxorg/ace/wiki/Default-Keyboard-Shortcuts
         margin: 0px 2px;
     }
     .fileUpload input.upload {
+        width: 70px;
         position: absolute;
-        top: 0;
+        top: -5px;
         right: 0;
         margin: 0;
         padding: 0;
@@ -957,13 +958,13 @@ function scroll(speed) {
 showRows();
 
 var selectedText = "";
-var openedFile = null;
+var openedFileName = null;
 document.getElementById('files1').addEventListener('change', 
     function(evt) {
         new UTILIO.FileOpenerText(function(text, f){
             editor.setValue(text, -1); //TODO remember line
             editor_focus();
-            openedFile = f;
+            openedFileName = f.name;
             var idx = f.name.lastIndexOf(".");
             if (idx > 0) {
                 var ext = f.name.substring(idx+1);
@@ -986,19 +987,59 @@ function editor_focus() {
 }
 function exportData() {
     var fileName = "Unnamed";
-    if (openedFile) {
+    if (openedFileName) {
         //File.webkitRelativePath 
-        fileName = openedFile.name;
+        fileName = openedFileName;
     }
     UTILIO.saveAs(UTILIO.text2blob(editor.getValue()), fileName);
 }
 function newFile() {
     if (confirm("Create a new document? All unsaved data will be lost.") == true) {
         editor.setValue("");
-        openedFile = null;
+        openedFileName = null;
     }
 }
 window.onbeforeunload = function() { return "Your work will be lost."; };
+
+//localStorage.sevnTest = "test";
+//console.log(localStorage.sevnTest);
+//localStorage.removeItem("sevnTest");
+function saveCurrentStateInterval() {
+    //clearInterval(intervalPointer);
+    var intervalPointer=setInterval(function () {
+        var cursor = editor.getCursorPosition();
+        var row = cursor.row;
+        var column = cursor.column;
+        var state = { mode: editor.session.$modeId, theme : editor.getTheme(), value : editor.getValue(), openedFileName : openedFileName, row: row, column : column };
+        localStorage.sevnEditor = JSON.stringify(state);
+        
+        //console.log(localStorage.sevnEditor);
+    }, 100);
+}
+function restoreState() {
+    console.log(localStorage.sevnEditor);
+    if (localStorage.sevnEditor) {
+        try {
+            var state = JSON.parse(localStorage.sevnEditor);
+            editor.setValue(state.value);
+            openedFileName = state.openedFileName;
+            document.getElementById('uploadFile').value = openedFileName;
+            setMode(state.mode);
+            //setTheme(state.theme);
+            editor.gotoLine(state.row+1, state.column);
+            setTimeout(function(){
+                editor.renderer.scrollCursorIntoView({row: state.row, column: state.column}, 0.5);
+            }, 500);
+        } catch (e) {
+            console.log("parse json error", e);
+        }
+    
+    }
+}
+
+restoreState();
+saveCurrentStateInterval();
+editor_focus();
 </script>
 
 </body>
