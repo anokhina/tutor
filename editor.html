@@ -871,6 +871,10 @@ function setMode(sel) {
 function setTheme(sel) {
     editor.setTheme(sel.value);
 }
+function setSelectionUI(selobj, sel) {
+    selMode = sel;
+    selMode.onchange()
+}
 var selMode = document.getElementById("selMode");
 var selTheme = document.getElementById("selTheme");
 var themes = ace.require("ace/ext/themelist").themes;
@@ -1004,6 +1008,8 @@ window.onbeforeunload = function() { return "Your work will be lost."; };
 //localStorage.sevnTest = "test";
 //console.log(localStorage.sevnTest);
 //localStorage.removeItem("sevnTest");
+var appStorage = sessionStorage;
+
 function saveCurrentStateInterval() {
     //clearInterval(intervalPointer);
     var intervalPointer=setInterval(function () {
@@ -1011,24 +1017,24 @@ function saveCurrentStateInterval() {
         var row = cursor.row;
         var column = cursor.column;
         var state = { mode: editor.session.$modeId, theme : editor.getTheme(), value : editor.getValue(), openedFileName : openedFileName, row: row, column : column };
-        localStorage.sevnEditor = JSON.stringify(state);
+        appStorage.sevnEditor = JSON.stringify(state);
         
-        //console.log(localStorage.sevnEditor);
+        //console.log(appStorage.sevnEditor);
     }, 100);
 }
 function restoreState() {
-    console.log(localStorage.sevnEditor);
-    if (localStorage.sevnEditor) {
+    console.log(appStorage.sevnEditor);
+    if (appStorage.sevnEditor) {
         try {
-            var state = JSON.parse(localStorage.sevnEditor);
+            var state = JSON.parse(appStorage.sevnEditor);
             editor.setValue(state.value);
             openedFileName = state.openedFileName;
             document.getElementById('uploadFile').value = openedFileName;
-            setMode(state.mode);
-            //setTheme(state.theme);
             editor.gotoLine(state.row+1, state.column);
             setTimeout(function(){
                 editor.renderer.scrollCursorIntoView({row: state.row, column: state.column}, 0.5);
+                setSelectionUI(selMode, state.mode);
+                setSelectionUI(selTheme, state.theme);
             }, 500);
         } catch (e) {
             console.log("parse json error", e);
