@@ -1,0 +1,176 @@
+<!DOCTYPE HTML>
+<!--
+Copyright 2018 Veronica Anokhina.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Image loader</title>
+
+        <script type="text/javascript" src="imgget-cfg.js"></script>
+        
+    </head>
+    <body>
+        <img id="showimg" src="e.webp.png">
+        
+        
+        <script>
+        
+        var IMG_PREFIX = "imgPrefix";
+        var RES_ID = "zzz";
+        var RES_URL = "zzz";
+        var RES_ARRAY_PG = [];
+        var RES_PG = 3;
+        var RES_PG_TILL = 0;
+        
+        imggetCfg.init();
+
+    function main() {
+        logIt('*** main ***');
+        setTimeout(function() {
+            batchImg(RES_ARRAY_PG, RES_PG, RES_PG_TILL);
+            
+        }, 1000);
+    }
+    function batchImg(pgArr, pg, tillNum) {
+        if (pgArr.length > 0) {
+            pg = pgArr[0];
+        }
+        if (tillNum === undefined) {
+            tillNum = pg - 1;
+        }
+        
+        var ctx = { done:true, i:pg, j:0 };
+        var intervalPointer=setInterval(function () {
+            logIt(JSON.stringify(ctx), tillNum);
+            if (ctx.i > tillNum) {
+                if (ctx.done) {
+                
+                    ctx.done = false;
+                    batchImgParam(IMG_PREFIX, RES_ID, ctx.i, function(err){
+                        logIt("----error?---"+err);
+                        if (err) {
+                            ctx.i = tillNum;
+                        } else {
+                            ctx.j++;
+                            if (pgArr.length > 0) {
+                                if (ctx.j < pgArr.length) {
+                                    ctx.i = pgArr[ctx.j];
+                                } else {
+                                    ctx.i = tillNum;
+                                }
+                            } else {
+                                ctx.i = ctx.i - 1;
+                            }
+                        }
+                        ctx.done = true;
+                    });
+                }
+            } else {
+                ctx.done = true;
+            }
+            if (ctx.done) {
+                clearInterval(intervalPointer);
+                
+            }
+        }, 100);
+        
+    }
+    function batchImgParam(imgPrefix, picid, pg, callback) {
+    
+        var url = RES_URL;
+        var page = "" + pg;
+        var rt = "w1280";
+        var ft = "gif";
+        var fullUrl = url + "file=" + picid + "&page=" + page + "&rt=" + rt + "&ft=" + ft;
+        var fullUrl1 = url + "file=" + picid + "&page=" + page + "&rt=" + rt + "&ft=jpg";
+        openImageAlt(fullUrl, fullUrl1, "" + pg, {name : "" + pg}, function(imgSrc, fmt) {
+            var err = null;
+            if (imgSrc && fmt) {
+                fmt = "gif";
+                var fn = "" + pg + "." + fmt;
+                if (pg < 100) {
+                    fn = "0" + fn;
+                }
+                if (pg < 10) {
+                    fn = "0" + fn;
+                }
+                logIt("Loaded>"+imgPrefix+fn);
+                try {
+                    JavaFileLoader.captureImage("showimg", imgPrefix+fn, fmt);
+                } catch (e) {
+                    logIt(e);
+                }
+            } else {
+                err = true;
+            }
+            if (callback) callback(err);
+        });
+    }
+    
+    function openImageAlt(imgSrc, imgSrcAlt, title, f, callback) {
+        openImage("gif", imgSrc, title, f, callback, function(){
+            openImage("jpg", imgSrcAlt, title, f, callback, function() {
+                logIt("wrong format or not found>" + imgSrc);
+                //alert("wrong format or not found>" + imgSrc);
+                if (callback) callback(true);
+            });
+        });
+    }
+
+    function openImage(ft, imgSrc, title, f, callback, errCall) {
+        var image;
+        image = new Image();
+        var timer = setTimeout(function(){
+            if ( !image.complete || !image.naturalWidth ) {
+                if (errCall) errCall();
+            }
+        }, 6000);
+        
+        image.onerror = function() {
+            //alert("wrong format or not found>" + imgSrc);
+            if (errCall) errCall();
+        };
+        image.onload = function(imge) {
+            var showimg = document.getElementById("showimg");
+            if (showimg) {
+                try {
+                    showimg.src = imgSrc;
+                } catch (e) {}
+                showimg.title = f.name;
+            }
+            if (callback) callback(imgSrc, ft);
+        }
+        logIt("Try to load>" + imgSrc);
+        image.src = imgSrc;
+    }
+    
+    function logIt() {
+        try {
+            console.log.apply(this, arguments);
+        } catch (e) {
+        }
+        try {
+            JavaFileLoader.logIt(JSON.stringify(arguments));
+        } catch (e) {
+        }
+    }
+    
+    main();
+        </script>
+    </body>
+</html>        
+
