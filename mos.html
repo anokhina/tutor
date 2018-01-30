@@ -1,0 +1,139 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Image loader</title>
+
+
+    </head>
+    <body>
+<p><a href="https://www.mos.ru/pgu/ru/application/dogm/journal/?onsite_from=main_page" target="_newWin"> Попробовать открыть дневник</a>
+
+<p><a href="https://www.mos.ru/api/oauth20/v1/frontend/json/ru/process/enter?redirect=https%3A%2F%2Fwww.mos.ru%2F" target="_newWin">Войти</a>
+
+<div id="divlinks">
+</div>
+
+<p>
+
+    <input type="date" id="edate" name="edate" />
+	<p><input type="text" id="fename" name="fename" style="width:100%" value="" placeholder="1234567 Alex, 1234560 Max"/>
+    <p><input type="button" onclick="restore()" value="Reset"/>
+    <input type="button" onclick="restoreOrig()" value="Reset to original"/>
+    <input type="button" onclick="save()" value="Save"/>
+    <p><input type="button" onclick="loadPdf()" value="Load pdf"/>
+    <p><input type="button" onclick="printLinks()" value="print links"/>
+
+<p>
+
+<script>
+var divlinks = document.getElementById('divlinks');
+var fename = document.getElementById('fename');
+var edate = document.getElementById('edate');
+var origFename = null;
+restore();
+printLinks();
+
+function restore() {
+    edate.value = new Date().toISOString().substr(0, 10);
+    if ("localStorage" in window) {
+        try {
+            var storedVal = window.localStorage.getItem("sevnMosPupils"); 
+            fename.value = storedVal;
+            if (origFename == null) {
+                origFename = storedVal
+            }
+        } catch(e) {}
+    }
+}
+
+function restoreOrig() {
+    edate.value = new Date().toISOString().substr(0, 10);
+    fename.value = origFename;
+}
+
+function toZero(i) {
+    if (i < 10) {
+        return "0" + i;
+    }
+    return i;
+}
+function calcDates() {
+    //zeroDate.toISOString().substr(0, 10);
+    var d = new Date(edate.value);
+    var n = d.getDay(); //0(sunday)-6
+    if (n == 0) {
+        n = 7;
+    }
+    var fromDate = new Date(d);
+    var toDate = new Date(d);
+    fromDate.setDate(fromDate.getDate() - n + 1);
+    toDate.setDate(toDate.getDate() + (7 - n));
+    
+    var fromYear = fromDate.getFullYear();
+    var toYear = toDate.getFullYear();
+    var fromMonth = toZero(fromDate.getMonth() + 1); //0-11
+    var toMonth = toZero(toDate.getMonth() + 1);
+    var fromD = toZero(fromDate.getDate());
+    var toD = toZero(toDate.getDate());
+    
+    var fromStr = fromD + "." + fromMonth + "." + fromYear;
+    var toStr = toD + "." + toMonth + "." + toYear;
+
+    return {fromStr: fromStr, toStr: toStr};
+}
+function printLink(el, name, fromStr, toStr) {
+    var elem = window.document.createElement('a');
+    elem.href = "https://dnevnik.mos.ru/reports/api/student_journal/pdf?student_profile_id="+el.trim()+"&begin_date="+fromStr+"&end_date="+toStr;
+    //elem.download = el + ".pdf";        
+    elem.setAttribute("target", el)
+    elem.appendChild(document.createTextNode(name));
+    divlinks.appendChild(elem);
+    divlinks.appendChild(window.document.createElement('p'));
+}
+function loadPdfFile(el, name, fromStr, toStr) {
+    var elem = window.document.createElement('a');
+    elem.href = "https://dnevnik.mos.ru/reports/api/student_journal/pdf?student_profile_id="+el.trim()+"&begin_date="+fromStr+"&end_date="+toStr;
+    //elem.download = el + ".pdf";        
+    elem.setAttribute("target", el)
+    document.body.appendChild(elem);
+    elem.click();
+    document.body.removeChild(elem);
+}
+function processNames(fn) {
+    var dates = calcDates();
+    var fromStr = dates.fromStr;
+    var toStr = dates.toStr;
+    
+	var arr = fename.value.split(",");
+    arr.forEach((elStr) => {
+        var elStrArr = elStr.trim().split(" ");
+        if (elStrArr.length > 0) {
+            var el = elStrArr[0];
+            var name = el;
+            if (elStrArr.length > 1) {
+                name = elStrArr[1];
+            }
+            fn(el, name, fromStr, toStr);
+        }
+    });
+}
+function save() {
+	window.localStorage.sevnMosPupils = fename.value;
+}
+function loadPdf() {
+    save();
+    processNames(loadPdfFile);
+}
+function printLinks() {
+    save();
+    divlinks.innerHTML = '';
+    processNames(printLink);
+}
+
+</script>
+
+    </body>
+</html>        
+

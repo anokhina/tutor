@@ -11,6 +11,7 @@ events.html
 htmleditor.html 
 imgConvert.html 
 memoryGame.html 
+mos.html 
 paint.html 
 phones.html 
 qrcodebutton.html 
