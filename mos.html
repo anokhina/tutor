@@ -17,7 +17,7 @@
 
 <p>
 
-    <input type="date" id="edate" name="edate" />
+    <input type="date" id="edate" name="edate" onchange="printLinks()" />
 	<p><input type="text" id="fename" name="fename" style="width:100%" value="" placeholder="1234567 Alex, 1234560 Max"/>
     <p><input type="button" onclick="restore()" value="Reset"/>
     <input type="button" onclick="restoreOrig()" value="Reset to original"/>
@@ -83,9 +83,28 @@ function calcDates() {
 
     return {fromStr: fromStr, toStr: toStr};
 }
-function printLink(el, name, fromStr, toStr) {
+function makeHrefPdf(el, fromStr, toStr) {
+    return "https://dnevnik.mos.ru/reports/api/student_journal/pdf?student_profile_id="+el.trim()+"&begin_date="+fromStr+"&end_date="+toStr;
+}
+function makeHrefJournal(el, dayTime) {
+
+    return "https://dnevnik.mos.ru/manage/student_journal/"+el.trim()+"#day"+dayTime;
+}
+function printLink2(el, name, fromStr, toStr) {
+    var d = new Date(edate.value);
+    d.setHours(0);
+    d.setMinutes(0);
+    d.setSeconds(0);
+    d.setMilliseconds(0);
+    //console.log("-------", d.toISOString(), d.getTime());
+    var dayTime = d.getTime()/1000;//doesnt work :-(
+
+    printLink(el, name + " (PDF)", makeHrefPdf(el, fromStr, toStr));
+    printLink(el, name + " " + dayTime, makeHrefJournal(el, dayTime));
+}
+function printLink(el, name, url) {
     var elem = window.document.createElement('a');
-    elem.href = "https://dnevnik.mos.ru/reports/api/student_journal/pdf?student_profile_id="+el.trim()+"&begin_date="+fromStr+"&end_date="+toStr;
+    elem.href = url;
     //elem.download = el + ".pdf";        
     elem.setAttribute("target", el)
     elem.appendChild(document.createTextNode(name));
@@ -129,7 +148,7 @@ function loadPdf() {
 function printLinks() {
     save();
     divlinks.innerHTML = '';
-    processNames(printLink);
+    processNames(printLink2);
 }
 
 </script>
