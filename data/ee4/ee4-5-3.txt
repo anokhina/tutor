@@ -1,0 +1,14 @@
+wash, washe<it>ed</it>, мыть|
+help, help<it>ed</it>, помогать|
+repair, repair<it>ed</it>, чинить|
+clean, clean<it>ed</it>, очищать|
+answer, answer<it>ed</it>, отвечать|
+water, water<it>ed</it>, поливать |
+cook, cook<it>ed</it>, готовить (пищу)|
+do, <it>did</it>, делать|
+go, <it>went</it>, идти|
+make, <it>made</it>, сделать|
+lay, <it>laid</it>, класть|
+feed, <it>fed</it>, кормить|
+say, <it>said</it>, говорить|
+take, <it>took</it>, брать

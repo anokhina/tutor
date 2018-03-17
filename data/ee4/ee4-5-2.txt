@@ -1,0 +1,11 @@
+do <it>my</it> homework, делаю домашнюю работу,
+go shopping, хожу в магазин,
+make <it>my</it> bed, заправляю кровать,
+lay the table, накрываю на стол,
+do the washing up, мою посуду,
+answer phone calls, отвечаю на телефонные звонки,
+clean <it>my</it> room, убираю комнату,
+feed <it>my</it> pets, кормлю домашних животных,
+water the flowers, поливаю цветы,
+takes <it>my</it> pet for a walk, прогуливаю животных,
+repair <it>my</it> bike, чиню велосипед

@@ -1,0 +1,12 @@
+mother, мама,
+father, папа,
+son, сын,
+brother, брат,
+sister, сестра,
+grandmother, бабушка,
+grandfather, дедушка,
+daughter, дочь,
+play puzzles, играть в пазл,
+take a photo of, фотографировать,
+watch the stars, наблюдать за звездами,
+play computer games, играть в компьютерные игры

@@ -1,0 +1,17 @@
+play, play<it>ed</it>, играть |
+walk, walk<it>ed</it>, гулять |
+want, want<it>ed</it>, хотеть |
+open, open<it>ed</it>, открыть |
+talk, talk<it>ed</it>, говорить; рассказывать |
+like, lik<it>ed</it>, любить |
+live, liv<it>ed</it>, жить |
+see, <it>saw</it>, видеть |
+go, <it>went</it>, идти |
+have, <it>had</it>, иметь |
+say, <it>said</it>, сказать |
+fly, <it>flew</it>, летать |
+fall, <it>fell</it>, падать |
+do, <it>did</it>, делать |
+take, <it>took</it>, брать |
+give, <it>gave</it>, давать |
+sit, <it>sat</it>, сидеть 

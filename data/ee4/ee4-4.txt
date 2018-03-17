@@ -1,0 +1,25 @@
+play, play<it>ed</it>, играть |
+walk, walk<it>ed</it>, гулять |
+want, want<it>ed</it>, хотеть |
+open, open<it>ed</it>, открыть |
+talk, talk<it>ed</it>, говорить; рассказывать |
+like, lik<it>ed</d>, любить |
+live, liv<it>ed</d>, жить |
+see, <it>saw</it>, видеть |
+go, <it>went</it>, идти |
+have, <it>had</d>, иметь |
+say, <it>said</it>, сказать |
+fly, <it>flew</it>, летать |
+fall, <it>fell</it>, падать |
+do, <it>did</it>, делать |
+take, <it>took</it>, брать |
+give, <it>gave</it>, давать |
+sit, <it>sat</it>, сидеть |
+yesterday, вчера |
+the day before yesterday, позавчера |
+ten days ago, 10 дней назад |
+a week ago, неделю назад |
+a month ago, месяц назад |
+last year, в прошлом году |
+last summer, прошлым летом |
+last night, прошлой ночью |

@@ -1,0 +1,8 @@
+yesterday, вчера,
+the day before yesterday, позавчера,
+ten days ago, 10 дней назад,
+a week ago, неделю назад,
+a month ago, месяц назад,
+last year, в прошлом году,
+last summer, прошлым летом,
+last night, прошлой ночью

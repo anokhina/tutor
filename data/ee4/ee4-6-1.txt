@@ -1,0 +1,24 @@
+short, короткий |
+long, длинный |
+new, новый |
+dirty, грязный |
+brown, коричневый |
+grey, серый |
+blouse, блуза |
+boots, ботинки |
+cap, кепка |
+coat, пальто |
+dress, платье |
+jacket, жакет |
+jeans, джинсы |
+mittens, варежки |
+sweater, свитер |
+trainers, кроссовки |
+T-shirt, футболка |
+shoes, обувь, ботинки, туфли |
+trousers, брюки |
+clothes, одежда |
+raincoat, плащ |
+shirt, рубашка |
+shorts, шорты |
+umbrella, зонт |
