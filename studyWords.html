@@ -17,6 +17,16 @@ limitations under the License.
 <html>
 <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <script>
+var lessonsCfg = 
+[
+]
+;
+
+    </script>
+        <title>Learn words</title>
+        <script src="studyWords.js"></script>
 
   <style type="text/css">
 body {
@@ -102,6 +112,84 @@ div.tab button.active {
 it {
     font-style: oblique;
     color: black;
+}
+
+.tree ul {
+    margin-left: -20px;
+}
+
+.tree li {
+    list-style-type: none;
+    margin:10px;
+    position: relative;
+}
+
+.tree li::before {
+    content: "";
+    position: absolute;
+    top:-7px;
+    left:-20px;
+    border-left: 1px solid #ccc;
+    border-bottom:1px solid #ccc;
+    border-radius:0 0 0 0px;
+    width:20px;
+    height:15px;
+}
+
+.tree li::after {
+    position:absolute;
+    content:"";
+    top:8px;
+    left:-20px;
+    border-left: 1px solid #ccc;
+    border-top:1px solid #ccc;
+    border-radius:0px 0 0 0;
+    width:20px;
+    height:100%;
+}
+
+.tree li:last-child::after  {
+    display:none;
+}
+
+.tree li:last-child:before{
+    border-radius: 0 0 0 5px;
+}
+
+ul.tree>li:first-child::before {
+    display:none;
+}
+
+ul.tree>li:first-child::after {
+    border-radius:5px 0 0 0;
+}
+
+.tree li a {
+    border: 1px #ccc solid;
+    border-radius: 5px;
+    padding:2px 5px;
+}
+
+.tree li.folder > a {
+    background: yellow;
+}
+.tree li.collapsed>ul {
+    display: none;
+}
+.tree li a:hover, .tree li a:hover+ul li a,
+.tree li a:focus, .tree li a:focus+ul li a {
+    background: #ccc; color: #000; border: 1px solid #FF9800;
+}
+
+.tree li a:hover+ul li::after, .tree li a:focus+ul li::after,
+.tree li a:hover+ul li::before, .tree li a:focus+ul li::before 
+.tree li a:hover+ul::before, .tree li a:focus+ul::before 
+.tree li a:hover+ul ul::before, .tree li a:focus+ul ul::before{
+    border-color:  #4CAF50; /*connector color on hover*/
+}
+
+#lessons {
+    padding-left: 0px;
 }
   </style>
 
@@ -762,9 +850,85 @@ function openTab(evt, tabName) {
             <div class="inline">Theme: <input type="text" id="theme" name="theme" size="12" /></div>
             <button class="tablinks" onclick="saveSettings()">Save</button>
         </div>
+        <div>
+            <ul id ="lessons" class="tree">
+                <li><a>Root</a>
+                    <ul>
+                        <li><a>Parent 2</a></li>
+                        <li class="folder"> <a>Parent 3</a>
+                            <ul>
+                                <li class="folder"> <a>1st Child of 3</a>
+                                    <ul>
+                                        <li><a>1st grandchild</a></li>
+                                        <li><a>2nd grandchild</a></li>
+                                    </ul>
+                                </li>
+                                <li><a>2nd Child of 3</a></li>
+                                <li><a>3rd Child of 3</a></li>
+                            </ul>
+                        </li>
+                        <li class="folder collapsed"> <a>Parent 4</a>
+                            <ul>
+                                <li><a>Parent 4's only child</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>        
+        </div>
     </div>
 
 <script>
+
+    function addFolderContent(parent, content) {
+        content.forEach(function(el) {
+            var nm = "unnamed";
+            if ("name" in el) {
+                nm = el.name;
+            }
+            var li = document.createElement("li");
+            parent.appendChild(li);
+            var a = document.createElement("a");
+            li.appendChild(a);
+            a.appendChild(document.createTextNode(nm));
+            
+            if ("type" in el && "folder" == el.type) {
+                li.classList.add("folder");
+                li.classList.add("collapsed");
+                a.onclick = function (evt) { 
+                    if (evt.target.parentNode.classList.contains("collapsed")) {
+                        evt.target.parentNode.classList.remove("collapsed");
+                    } else {
+                        evt.target.parentNode.classList.add("collapsed");
+                    }
+                };
+                if ("content" in el) {
+                    var ul = document.createElement("ul");
+                    li.appendChild(ul);
+                    addFolderContent(ul, el.content);
+                }
+            } else {
+                if ("content" in el) {
+                    (function (a, text, name) {
+                        a.onclick = function (evt) {
+                            openTab({ currentTarget: document.getElementById("buttonInfo") }, "Info");
+                            loadWors(text, ",");
+                            document.getElementById('theme').value = name;
+                        };
+                    })(a, el.content, nm);
+                }            
+            }
+        });
+    }
+    function makeLessonsTree(content) {
+        var lessons = document.getElementById('lessons');
+        if (lessons) {
+            while (lessons.firstChild) {
+                lessons.removeChild(lessons.firstChild);
+            }
+            addFolderContent(lessons, content);
+        }
+    }
     function handleFileSelect(evt) {
         if (window.File && window.FileReader && window.FileList && window.Blob) {
 
@@ -805,6 +969,7 @@ function openTab(evt, tabName) {
 
 <script>
 startGame();
+makeLessonsTree(lessonsCfg);
 </script>
 </body>
 </html>

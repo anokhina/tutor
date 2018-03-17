@@ -1,3 +1,4 @@
+data\noty
 ace 
 cke_cfg 
 ckeditor
@@ -17,4 +18,5 @@ paint.html
 phones.html 
 qrcodebutton.html 
 studyWords.html 
+studyWords.js 
 trainReading.html 
