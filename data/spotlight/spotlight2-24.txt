@@ -1,0 +1,21 @@
+yummy
+chocolate
+burger
+chips
+apple
+banana
+sandwich
+biscuit
+cake
+egg
+cheese
+food
+favourite
+more
+give
+What's your favourite food?
+My favourite food is cake.
+My favourite food is burger.
+Give me more.
+Give me an apple.
+Give me a burger.

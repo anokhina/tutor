@@ -1,0 +1,10 @@
+chick, цыплёнок,
+cheese, сыр,
+chips, чипсы,
+chimp, шимпанзе,
+chin, подбородок,
+cherry, вишня,
+chocolate, шоколад,
+beach, морской берег,
+teacher, учитель
+

@@ -1,0 +1,5 @@
+burgers, бургеры,
+bananas, бананы,
+chips, чипсы,
+apples, яблоки,
+sandwiches, бутерброды

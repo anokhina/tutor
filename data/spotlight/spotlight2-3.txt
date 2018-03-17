@@ -1,0 +1,9 @@
+rabbit, кролик,
+snake, змея,
+tree, дерево
+umbrella, зонт,
+vest, майка,
+window, окно,
+box, коробка,
+yacht, яхта,
+zip, молния

@@ -1,0 +1,20 @@
+footprints, след (ноги) |
+stair, ступенька |
+bubble, пузырь |
+bird, птица |
+greenhouse, теплица |
+gnome, гном |
+match, спичка |
+paper, бумага |
+clip, скрепка |
+tooth, зуб |
+toothpick, зубочистка |
+long, длинный |
+piece, часть |
+string, нитка |
+mouse, мышь |
+mice, мышИ |
+small, маленький |
+want, хотеть |
+dear, дорогой |
+here, здесь |
