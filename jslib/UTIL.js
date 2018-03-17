@@ -163,5 +163,12 @@ var UTIL = (function() {
         }
     };
     
+    // sleep(100).then(function(){})
+    // sleep(100).then(() => {})
+    self.sleep = function(ms) {
+      //return new Promise((resolve, reject) => { setTimeout(resolve, ms); });
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
     return self;
 })();

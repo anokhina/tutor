@@ -753,7 +753,7 @@ function addPhoneProperty(propName, defVal, ifNotExist) {
 }
 var editPhoneObj;
 function editPhone(rowIt) {
-    document.getElementById("phoneEditorTableReset").setAttribute("onclick", "editPhone("+JSON.stringify(rowIt)+");")
+    document.getElementById("phoneEditorTableReset").setAttribute("onclick", "editPhone("+JSON.stringify(rowIt)+");");
     _editPhone(rowIt);
 }
 function _editPhone(rowIt) {
