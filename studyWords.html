@@ -265,7 +265,7 @@ function makeSettings() {
     settings.wordrate = wordrate;
     return settings;
 }
-function saveSettings() {
+function saveSettings(inFile) {
     var uname = document.getElementById('uname').value;
     if (! (uname && uname.trim().length > 0)) {
         alert("No user name");
@@ -273,12 +273,14 @@ function saveSettings() {
     }
     var settings = makeSettings();
     
-    var text = JSON.stringify( settings );
-    var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
-    var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
-    var filenameUname = "-" + uname + "-" + settings.theme + "-";
-    //var filenameUname = uname.replace(/[^a-zA-Z0-9_-а-яА-Я]/gi, '_').toLowerCase();
-    saveAs(blob, "configData"+filenameUname+todayDate+".json");
+    if (inFile) {
+        var text = JSON.stringify( settings );
+        var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+        var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
+        var filenameUname = "-" + uname + "-" + settings.theme + "-";
+        //var filenameUname = uname.replace(/[^a-zA-Z0-9_-а-яА-Я]/gi, '_').toLowerCase();
+        saveAs(blob, "configData"+filenameUname+todayDate+".json");
+    }
     return settings;
 }
 
@@ -288,14 +290,14 @@ function loadSettings(cfg) {
 
     if ("words" in cfg) {
         clearWords();
-        document.getElementById('uname').value = "";
+        setUserValue("");
         if ("uname" in cfg) {
-            document.getElementById('uname').value = cfg.uname;
+            setUserValue(cfg.uname);
         }
 
-        document.getElementById('theme').value = "";
+        setThemeValue("");
         if ("theme" in cfg) {
-            document.getElementById('theme').value = cfg.theme;
+            setThemeValue(cfg.theme);
         }
 
         var wordDivs = [];
@@ -412,6 +414,10 @@ function wordClicked(p) {
                             showPrise();
                             var cfg = saveSettings();
                             currentSettings = cfg;
+                            if (currentSettings) {
+                                localStorage.sevnStudyWordsCurrentSettings = JSON.stringify(currentSettings);
+                                saveCurrentSettings(currentSettings);
+                            }
                         }
                     }, 500);
                     lastClicked = nextLastClicked;
@@ -580,7 +586,22 @@ function moveDiv(element, pnt) {
 }
 
 function startGame(startCurrent) {
-    if (startCurrent) {
+    if (localStorage.sevnStudyWordsUname) {
+        document.getElementById('uname').value = localStorage.sevnStudyWordsUname;
+    }
+    if (localStorage.sevnStudyWordsTheme) {
+        document.getElementById('theme').value = localStorage.sevnStudyWordsTheme;
+    }
+    if (currentSettings) {} else {
+        startAgain = true;
+        if (localStorage.sevnStudyWordsCurrentSettings) {
+            try {
+                currentSettings = JSON.parse(localStorage.sevnStudyWordsCurrentSettings);
+            } catch (e) {}
+        }
+    }
+
+    if (startCurrent && currentSettings) {
         if (startAgain) {
             loadSettings(currentSettings);
         } else {
@@ -591,6 +612,9 @@ function startGame(startCurrent) {
         //text="4,2x2|9,3x3|16,4x4,2x8,8x2|25,5x5|36,6x6,9x4,4x9|49,7x7|64,8x8|81,9x9|6,2x3,3x2|8,4x2,2x4|10,5x2,2x5|12,6x2,2x6,3x4,4x3|18,2x9,9x2,6x3,3x6|15,3x5,5x3";
         //text = "<delimeter>|</delimeter>red|красный|plum|сливовый|img:zzz1.png|тест<sup>x</sup><sub>y</sub>";
         //text = "A,эй,B,би,C,си,D,ди,E,и,F,эф,G,джи,H,эйч,I,ай,J,джей,K,кей,L,эл,M,эм,N,эн,O,оу,P,пи,Q,кью,R,а,S,эс,T,ти,U,ю,V,ви,W,дабл ю,X,экс,Y,вай,Z,зет";
+        if (localStorage.sevnStudyWordsText) {
+            text = localStorage.sevnStudyWordsText;
+        }
         loadWors(text, ",");
     }
 }
@@ -608,6 +632,8 @@ function clearWords() {
 }
 function loadWors(text, splitter) {
 // <lang1></lang2><lang2></lang2>
+    localStorage.sevnStudyWordsText = text;
+    
     startAgain = false;
     hidePrise();
     var otherDelimeter = false;
@@ -651,6 +677,9 @@ function loadWors(text, splitter) {
     
     if (words.length > 0) addWord(words[0], wordDivs, wordsid, other, words, 1, function(){
         currentSettings = makeSettings();
+        if (currentSettings) {
+            localStorage.sevnStudyWordsCurrentSettings = JSON.stringify(currentSettings);
+        }
     });
 }
 function addWord(e, wordDivs, wordsid, other, arr, idx, callback) {
@@ -831,8 +860,9 @@ function openTab(evt, tabName) {
 
 <div class="controldiv">
     <div class="tab">
-        <button id="buttonInfo" class="tablinks" onclick="openTab(event, 'Info')" >&equiv;</button>
-        <button class="tablinks" onclick="startGame(true)">&#8883;</button>
+        <button id="buttonInfo" class="tablinks" onclick="openTab(event, 'Info')" >&equiv;&nbsp;</button>
+        <button class="tablinks" onclick="startGame(true)">&nbsp;&#8883;&nbsp;</button>
+        <button class="tablinks" onclick="startGame()">NEW</button>
         <div id="allRate" class="tablinks inline">&nbsp;Rate:</div>
     </div>
 </div>
@@ -848,7 +878,7 @@ function openTab(evt, tabName) {
         <div class="tcontent">
             <div class="inline">User: <input type="text" id="uname" name="uname" size="10"/></div>
             <div class="inline">Theme: <input type="text" id="theme" name="theme" size="12" /></div>
-            <button class="tablinks" onclick="saveSettings()">Save</button>
+            <button class="tablinks" onclick="saveSettings(true)">Save</button>
         </div>
         <div>
             <ul id ="lessons" class="tree">
@@ -912,13 +942,43 @@ function openTab(evt, tabName) {
                     (function (a, text, name) {
                         a.onclick = function (evt) {
                             openTab({ currentTarget: document.getElementById("buttonInfo") }, "Info");
-                            loadWors(text, ",");
-                            document.getElementById('theme').value = name;
+                            openTheme(document.getElementById('uname').value, name, text);
                         };
                     })(a, el.content, nm);
                 }            
             }
         });
+    }
+    function openTheme(uname, theme, text) {
+        if (! (uname && uname.trim().length > 0)) {
+            alert("No user name");
+            return;
+        }
+        
+        findByNameTheme(uname, theme, 
+            function(results){
+                if (results.rows.length == 0) {
+                    loadWors(text, ",");
+                    setThemeValue(theme);
+                } else {
+                    localStorage.sevnStudyWordsCurrentSettings = results.rows.item(0).settings;
+                    currentSettings = null;
+                    startGame(true);
+                }
+            }, 
+            function(err){
+                loadWors(text, ",");
+                setThemeValue(theme);
+            }
+        );
+    }
+    function setUserValue(name) {
+        document.getElementById('uname').value = name;
+        localStorage.sevnStudyWordsUname= name;
+    }
+    function setThemeValue(name) {
+        document.getElementById('theme').value = name;
+        localStorage.sevnStudyWordsTheme = name;
     }
     function makeLessonsTree(content) {
         var lessons = document.getElementById('lessons');
@@ -955,7 +1015,7 @@ function openTab(evt, tabName) {
                     var cfg = JSON.parse(text);
                     loadSettings(cfg);
                 } catch (e) {
-                    document.getElementById('theme').value = themename;
+                    setThemeValue(themename);
 
                     console.log("parse json error");
                     loadWors(text, ",");
@@ -965,11 +1025,85 @@ function openTab(evt, tabName) {
     }
 
     document.getElementById('files').addEventListener('change', handleFileSelect, false);
+    
+    var db = openDatabase('sevnStudyWords', '1.0', 'Study db', 20 * 1024 * 1024);
+    // user theme settings
+    db.transaction(
+        function(transaction) {
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS user_theme_settings ' +
+                '  (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ' +
+                '   theme TEXT NOT NULL, ' +
+                '   settings TEXT NOT NULL, ' +
+                '   name TEXT NOT NULL);'
+            );
+        }
+    );
+
+
+function isFunction(v) {
+    return (v && typeof v === "function");
+}
+function saveCurrentSettings(settings) {
+     db.transaction(function (tx) {
+        tx.executeSql('UPDATE user_theme_settings SET settings = ? WHERE name = ? AND theme = ?', [JSON.stringify(settings), settings.uname, settings.theme], 
+            function(transaction, results){ 
+                console.log(results); 
+                if (results.rowsAffected == 0) {
+                    tx.executeSql('INSERT INTO user_theme_settings (settings, name, theme) VALUES (?, ?, ?)', [JSON.stringify(settings), settings.uname, settings.theme], 
+                        function(transaction, results){ 
+                            console.log(results); 
+                        }, 
+                        function(err) { 
+                            //TODO
+                            console.log(err);
+                        }
+                    );
+                }
+            }, 
+            function(err) { 
+                //TODO
+                console.log(err);
+            }
+        );
+     });
+}
+
+function findByNameTheme(name, theme, callback, callbackError) {
+    db.transaction(function (tx) {
+        tx.executeSql('SELECT * FROM user_theme_settings WHERE name=? AND theme=? ', [name, theme], 
+            function (tx, results) {
+                var len = results.rows.length;
+                let msg = "<p>Found rows: " + len + "</p>";
+                console.log(msg);
+        
+                for (let i = 0; i < len; i++) {
+                    console.log(i, results.rows.item(i));
+                }
+                if (isFunction(callback)) {
+                    callback(results);
+                }
+            },
+            function(err) { 
+                if (isFunction(callbackError)) {
+                    callbackError(err);
+                }
+            }
+        );
+    });
+}
+
 </script>
 
 <script>
-startGame();
+startGame(true);
 makeLessonsTree(lessonsCfg);
+document.getElementById('uname').onchange = function (evt) {
+    localStorage.sevnStudyWordsUname = evt.target.value;
+};
+document.getElementById('theme').onchange = function (evt) {
+    localStorage.sevnStudyWordsTheme = evt.target.value;
+};
 </script>
 </body>
 </html>
