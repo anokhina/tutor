@@ -209,10 +209,23 @@ div.tab button.active {
 </body>
 
 <script>
+
+function ObjectWrapper(obj) {
+    this.obj = obj;
+    this.set = function(param, v)  {
+        this.obj[param] = v;
+    }
+    this.get = function(param)  {
+        if ( param && param in this.obj ) {
+            return this.obj[param];
+        }
+        return undefined;
+    }
+}
 var SHOPPING = {
     pageSize : 3,
     pageButtonCount: 5,
-    val: {}
+    val: new ObjectWrapper({})
 };
 //    var id = __idprefix + "-" + UTIL.generateGuid();
 
@@ -339,10 +352,10 @@ function dict(cfg) {
             var filter = this.getFilter();
             if (args.data.data.length == 1) {
                 if (!isEmpty(filter.id)) {
-                    cfg.val[cfg.valName] = args.data.data[0];
+                    cfg.val.set(cfg.valName, args.data.data[0]);
                 }
             } else {
-                cfg.val[cfg.valName] = null;
+                cfg.val.set(cfg.valName, null);
             }
             console.log(cfg.val);
         },
@@ -566,7 +579,9 @@ function dict(cfg) {
                 }
             });
             
-            this.search();
+            this.search(this.getFilter());
+            this.option("inserting", false);
+            this.option("filtering", true);
         },
  
         fields: cfg.fields
@@ -607,8 +622,9 @@ function dictBindProdCat(cfg) {
                 SELECT * from 
 */
                 var sqlArgsCnt = [];
-                if ("product" in cfg.val && cfg.val.product) {
-                    sqlArgsCnt = sqlArgsCnt.concat(cfg.mainSqlParam(cfg));
+                var mainSqlParam = cfg.mainSqlParam(cfg);
+                if (mainSqlParam && mainSqlParam.length > 0 ) {
+                    sqlArgsCnt = sqlArgsCnt.concat(mainSqlParam);
                 } else {
                     return new Promise(function(resolve, reject) {
                         resolve({ data: [], itemsCount: 0 });
@@ -627,7 +643,7 @@ function dictBindProdCat(cfg) {
                 var filterClause = "";
                 
                 var sqlArgs = [];
-                sqlArgs = sqlArgs.concat(cfg.mainSqlParam(cfg));
+                sqlArgs = sqlArgs.concat(mainSqlParam);
                 
                 for (var j = 0; j < cfg.fieldNames.length; j++) {
                     var k = cfg.fieldNames[j];
@@ -711,11 +727,11 @@ function dictBindProdCat(cfg) {
                 var namesStr = "prodid, catid";
                 var paramStr = "?, ?";
                 var paramArr = [];
-                if ("category" in cfg.val && cfg.val.category 
-                    && "product" in cfg.val && cfg.val.product) {
+                if (cfg.val.get("category") 
+                    && cfg.val.get("product")) {
                     
-                    paramArr.push(cfg.val.product.id);
-                    paramArr.push(cfg.val.category.id);
+                    paramArr.push(cfg.val.get("product").id);
+                    paramArr.push(cfg.val.get("category").id);
                 }
 
                 return new Promise(function(resolve, reject) {
@@ -877,7 +893,11 @@ dictBindProdCat({
     mainsql: "SELECT tb.prodid as prodid, tb.catid as catid, tc.name as catname, tp.name as prodname, tp.idcode as prodidcode FROM prodcat " +
                     " tb, products tp, categories tc WHERE prodid = ? AND tb.prodid = tp.id AND tb.catid = tc.id ",
     mainSqlParam: function(cfg) {
-        return [cfg.val.product.id];
+        var prod = cfg.val.get("product");
+        if (prod) {
+            return [prod.id];
+        }
+        return [];
     },
     idPrefix: "prod",
     fields: [
