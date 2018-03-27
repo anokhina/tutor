@@ -606,10 +606,9 @@ function dictBindProdCat(cfg) {
                 
                 SELECT * from 
 */
-                var paramArr = [];
+                var sqlArgsCnt = [];
                 if ("product" in cfg.val && cfg.val.product) {
-                    
-                    paramArr.push(cfg.val.product.id);
+                    sqlArgsCnt = sqlArgsCnt.concat(cfg.mainSqlParam(cfg));
                 } else {
                     return new Promise(function(resolve, reject) {
                         resolve({ data: [], itemsCount: 0 });
@@ -625,21 +624,43 @@ function dictBindProdCat(cfg) {
                 if ("sortOrder" in filter) {
                     sortOrder = filter.sortOrder;
                 }
+                var filterClause = "";
                 
-                var whereClause = "WHERE prodid = ? ";
-                var sqlCnt = "SELECT count(*) AS cnt FROM " + cfg.table + " " + whereClause;
-                var sql = "SELECT tb.prodid as prodid, tb.catid as catid, tc.name as catname, tp.name as prodname, tp.idcode as prodidcode FROM " + cfg.table + 
-                    " tb, products tp, categories tc " + whereClause + " AND tb.prodid = tp.id AND tb.catid = tc.id " + 
-                    //" ORDER BY " + sortField + " " + sortOrder
+                var sqlArgs = [];
+                sqlArgs = sqlArgs.concat(cfg.mainSqlParam(cfg));
+                
+                for (var j = 0; j < cfg.fieldNames.length; j++) {
+                    var k = cfg.fieldNames[j];
+                    filterVal = filter[k];
+                    if (!isEmpty(filterVal)) {
+                        if (filterClause.length > 0) {
+                            filterClause += " AND ";
+                        }
+                        filterClause += (" " + k + " LIKE ? ");
+                        sqlArgs.push("%" + filterVal + "%");
+                        sqlArgsCnt.push("%" + filterVal + "%");
+                    }
+                }
+                if (filterClause.length > 0) {
+                    filterClause = " WHERE " + filterClause;
+                }
+                
+                sqlArgs.push(pageSize);
+                sqlArgs.push((pageIndex - 1) * pageSize);
+                
+                
+                var sqlCnt = "SELECT count(*) AS cnt FROM (" + cfg.mainsql + ") " + filterClause;
+                var sql = "SELECT * FROM (" + cfg.mainsql + 
+                    " ) " + filterClause + 
+                    " ORDER BY " + sortField + " " + sortOrder + 
                     " LIMIT ? OFFSET ? ";
 
-                var sqlArgs = [cfg.val.product.id, pageSize, ((pageIndex - 1) * pageSize)];
 
                 return new Promise(function(resolve, reject) {
                     var itemsCount = 0;
                     
                     db.transaction(function (tx) {
-                        tx.executeSql(sqlCnt, paramArr, 
+                        tx.executeSql(sqlCnt, sqlArgsCnt, 
                             function (tx, results) {
                                 var len = results.rows.length;
                                 if (len > 0) {
@@ -850,9 +871,14 @@ dictBindProdCat({
     valName: "product",
     div: "#jsGridProductCats",
     divPager: "#jsGridPagerProductCats",
-    sortField: "prodname",
+    sortField: "catname",
     table: "prodcat",
     fieldNames: ["prodid", "catid", "prodidcode", "prodname", "catname"], 
+    mainsql: "SELECT tb.prodid as prodid, tb.catid as catid, tc.name as catname, tp.name as prodname, tp.idcode as prodidcode FROM prodcat " +
+                    " tb, products tp, categories tc WHERE prodid = ? AND tb.prodid = tp.id AND tb.catid = tc.id ",
+    mainSqlParam: function(cfg) {
+        return [cfg.val.product.id];
+    },
     idPrefix: "prod",
     fields: [
         { name: "prodid", type: "text", width: 50, css: "hideOverflow", editing: false },
