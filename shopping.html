@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!--title>Привет</title-->
+
+<link type="text/css" rel="stylesheet" href="extlib/jsgrid/jsgrid.min.css" />
+<link type="text/css" rel="stylesheet" href="extlib/jsgrid/jsgrid-theme.min.css" />
+    
+<script type="text/javascript" src="extlib/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="extlib/jsgrid/jsgrid.min.js"></script>
+<script type="text/javascript" src="extlib/jsgrid/i18n/jsgrid-ru.js"></script>
+
+<script type="text/javascript" src="jslib/UTIL.js"></script>
+<script type="text/javascript" src="jslib/UTILDB.js"></script>
+<script type="text/javascript" src="jslib/UTILIO.js"></script>
+
+//http://js-grid.com/docs/#grid-controller
+//http://api.jquery.com/
+//https://barcodes.olegon.ru/api/card/name/4607031758328
+
+  <style type="text/css">
+html, body {
+    /*height:99%;*/
+    width:100%;
+    padding:0px;
+    margin:0px;
+}   
+.inline {
+    display: inline-block;
+    padding-top: 2px;
+}  
+textarea { 
+    resize:vertical; 
+    padding: 0px;
+    margin: 0px;    
+}
+
+/* Style the tab */
+div.tab {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #e5e5e5;
+}
+
+/* Style the buttons inside the tab */
+div.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    transition: 0.3s;
+    font-size: large;
+}
+
+/* Change background color of buttons on hover */
+div.tab button:hover {
+    background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+div.tab button.active {
+    background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    padding: 0px;
+    border: 1px solid #ccc;
+    border-top: none;
+    background-color: #f1f1f1;
+}
+
+.tcontent {
+    padding: 5px;
+}
+
+/* Style the close button */
+.topright {
+    float: right;
+    cursor: pointer;
+    font-size: large;
+    padding: 0px 4px 0px 0px;
+}
+
+.topright:hover {color: red;}
+
+#opstatus {
+    background-color: #bbb;
+}
+.controldiv {
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 200;
+}
+.controlleddiv {
+    position: relative;
+    top: 10px;
+}
+.rowbg {
+    background-color: #ccc;
+}
+.rowbgm {
+    background-color: #ddd;
+}
+.rowbgl {
+    background-color: #f1f1f1;
+}
+.Reset {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+#drop_zone {
+    border: 2px dashed #bbb;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+    padding: 25px;
+    text-align: center;
+    color: #bbb;
+}
+
+.hideOverflow {
+    overflow: hidden;
+}
+
+.jsgrid-cell {
+    padding: 1px;
+}
+.jsgrid-header-cell {
+    padding: 1px;
+}
+.jsgrid {
+    /*overflow: scroll;*/
+}
+.jsgrid-grid-body {
+    padding-bottom: 20px;
+}
+  </style>
+
+</head>
+<body>
+
+<div class="controldiv">
+
+    <div id="opstatus">Ok</div>
+
+    <div class="tab">
+      <button class="tablinks" onclick="openTab(event, 'Shops')" id="tabShops">Shops</button>
+      <button class="tablinks" onclick="openTab(event, 'Category')" id="tabCategory">Categories</button>
+      <button class="tablinks" onclick="openTab(event, 'Product')" id="tabProduct">Products</button>
+      <button class="tablinks" onclick="openTab(event, 'Errors')">Errors</button>
+    </div>
+</div>
+<div class="controlleddiv">
+
+
+    <div id="Shops" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <div id="jsGridPagerShops"></div>
+            <div id="jsGridShops"></div>
+        </div>
+    </div>
+    <div id="Category" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <div id="jsGridPagerCategories"></div>
+            <div id="jsGridCategories"></div>
+        </div>
+    </div>
+    <div id="Product" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <div id="jsGridPagerProducts"></div>
+            <div id="jsGridProducts"></div>
+        </div>
+    </div>
+    
+    <div id="Errors" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <span onclick="document.getElementById('errorDiv').innerHTML='<p>'" class="topright">&empty;&nbsp;</span>
+        <div class="tcontent">
+        <div id="errorDiv">Ok</div>
+        </div>
+    </div>
+    
+</div>
+
+<div style = "display:none;">
+            <div id="jsGridPager"></div>
+            <div id="jsGrid"></div>
+</div>
+
+</body>
+
+<script>
+var SHOPPING = {
+    pageSize : 3,
+    pageButtonCount: 5,
+    val: {}
+};
+//    var id = __idprefix + "-" + UTIL.generateGuid();
+
+    var db = openDatabase('sevnShopping', '1.0', 'Shopping db', 20 * 1024 * 1024);
+    db.transaction(
+        function(transaction) {
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS shops ' +
+                '  (id TEXT NOT NULL PRIMARY KEY, ' +
+                '   name TEXT NOT NULL,' +
+                '   memo TEXT);'
+            );
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS categories ' +
+                '  (id TEXT NOT NULL PRIMARY KEY, ' +
+                '   name TEXT NOT NULL,' +
+                '   memo TEXT);'
+            );
+            //https://barcodes.olegon.ru/4612705550566
+            //https://barcodes.olegon.ru/api/card/name/4612705550566
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS products ' +
+                '  (id TEXT NOT NULL PRIMARY KEY, ' +
+                '   idcode TEXT,' +
+                '   name TEXT NOT NULL,' +
+                '   memo TEXT);'
+            );
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS prodcat ' +
+                '  (prodid TEXT NOT NULL, ' +
+                '   catid  TEXT NOT NULL,' +
+                '   FOREIGN KEY(prodid) REFERENCES products(id)' +
+                '   FOREIGN KEY(catid) REFERENCES categories(id), PRIMARY KEY(prodid, catid) );'
+            );
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS shop_prod_code ' +
+                '  (id     TEXT NOT NULL PRIMARY KEY, ' +
+                '   name   TEXT NOT NULL,' +
+                '   prodid TEXT NOT NULL,' +
+                '   shopid TEXT NOT NULL,' +
+                '   FOREIGN KEY(prodid) REFERENCES products(id)' +
+                '   FOREIGN KEY(shopid) REFERENCES shops(id), ' +
+                '   CONSTRAINT uniq_shop_prod_code UNIQUE(prodid, shopid) );'
+            );
+        }
+    );
+
+function showStatus(m, o, exc) {
+    var now = new Date().toISOString().slice(0,19).replace("T", " ");
+    if (!o) {
+        o = m;
+    }
+    var msg = now + ": <pre>" + UTIL.escapeHTML(o) + "</pre>";
+    var msgSh = now + ": " + UTIL.escapeHTML(m);
+    var statDiv = document.getElementById('opstatus');
+    if (statDiv) {
+        statDiv.innerHTML = msgSh;
+    }
+    var errDiv = document.getElementById('errorDiv');
+    if (errDiv) {
+        errDiv.innerHTML = msg + "<p>" + errDiv.innerHTML;
+    }
+    if (exc) {
+        console.log(exc);
+    }
+}
+
+function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    if (evt) {
+        evt.currentTarget.className += " active";
+    }
+    window.scrollTo(0, 0);
+}
+
+function rowItem (results_rows, i) {
+    if ( "item" in results_rows ) {
+        return results_rows.item(i);
+    } else {
+        return results_rows[i];
+    }
+}
+function isEmpty(obj) {
+    if (obj) {
+        if (obj.length > 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function dict(cfg) {
+    jsGrid.locale("ru");
+ 
+    $(cfg.div).jsGrid({
+        width: "100%",
+        height: "auto",
+        
+        pageLoading: true,        
+ 
+        inserting: true,
+        
+        filtering: true,
+        editing: true,
+        sorting: true,
+        paging: true,
+        autoload: true,
+ 
+        pagerContainer : $(cfg.divPager),
+        pageSize: SHOPPING.pageSize,
+        pageButtonCount: SHOPPING.pageButtonCount,
+ 
+        onDataLoaded: function(args) {
+            var filter = this.getFilter();
+            if (args.data.data.length == 1) {
+                if (!isEmpty(filter.id)) {
+                    cfg.val[cfg.valName] = args.data.data[0];
+                }
+            } else {
+                cfg.val[cfg.valName] = null;
+            }
+            console.log(cfg.val);
+        },
+        
+        controller: {
+            loadData: function (filter) {
+                var pageIndex = filter.pageIndex;
+                var pageSize = filter.pageSize;
+                var sortField = cfg.sortField;
+                var sortOrder = "asc";
+                if ("sortField" in filter) {
+                    sortField = filter.sortField;
+                }
+                if ("sortOrder" in filter) {
+                    sortOrder = filter.sortOrder;
+                }
+                var whereClause = "";
+                var sqlArgsCnt = [];
+                var sqlArgs = [pageSize, ((pageIndex - 1) * pageSize)];
+                var filterVal = null;
+                
+                for (var j = 0; j < cfg.fieldNames.length; j++) {
+                    var k = cfg.fieldNames[j];
+                    filterVal = filter[k];
+                    if (!isEmpty(filterVal)) {
+                        if (whereClause.length > 0) {
+                            whereClause = " AND " + whereClause;
+                        }
+                        whereClause = (" " + k + " = ? ") + whereClause;
+                        sqlArgs.splice(0, 0, filterVal);
+                        sqlArgsCnt.splice(0, 0, filterVal);
+                    }
+                }
+                
+                filterVal = filter["id"];
+                if (!isEmpty(filterVal)) {
+                    if (whereClause.length > 0) {
+                        whereClause = " AND " + whereClause;
+                    }
+                    whereClause = " id = ? " + whereClause;
+                    sqlArgs.splice(0, 0, filterVal);
+                    sqlArgsCnt.splice(0, 0, filterVal);
+                }
+                if (whereClause.length > 0) {
+                    whereClause = "WHERE " + whereClause;
+                }
+                
+                console.log(filter, whereClause);
+                return new Promise(function(resolve, reject) {
+                    var itemsCount = 0;
+                    
+                    db.transaction(function (tx) {
+                        tx.executeSql("SELECT count(*) AS cnt FROM " + cfg.table + " " + whereClause, sqlArgsCnt, 
+                            function (tx, results) {
+                                var len = results.rows.length;
+                                if (len > 0) {
+                                    var rowIt = rowItem(results.rows,0);
+                                    itemsCount = rowIt.cnt;
+                                    
+                                    if (itemsCount > 0) {
+                                        tx.executeSql("SELECT * FROM " + cfg.table + " " + whereClause + " ORDER BY " + sortField + " " + sortOrder + " LIMIT ? OFFSET ? ", sqlArgs, 
+                                            function (tx, results) {
+                                                var len = results.rows.length;
+                                                var arr = [];
+                                                for(var i = 0; i < len; i++) {
+                                                    var rowIt = rowItem(results.rows,i);
+                                                    var obj = {};
+                                                    for (var j = 0; j < cfg.fieldNames.length; j++) {
+                                                        var k = cfg.fieldNames[j];
+                                                        obj[k] = rowIt[k];
+                                                    }
+                                                    obj.id = rowIt.id;
+                                                    arr.push(obj);
+                                                }
+                                                resolve({ data: arr, itemsCount: itemsCount });
+                                            },
+                                            function(err) { 
+                                                showStatus("Error", null, err);
+                                                reject(err);
+                                            }
+                                        );    
+                                    } else {
+                                        resolve({ data: [], itemsCount: itemsCount });
+                                    }
+                                    
+                                } else {
+                                    reject();
+                                }
+                            },
+                            function(err) { 
+                                showStatus("Error", null, err);
+                                reject(err);
+                            }
+                        );    
+
+                    });
+                    
+                });
+            },
+            insertItem: function(item) { 
+                console.log(item);
+                var id = cfg.idPrefix+UTIL.generateGuid();
+                if (item.id) {
+                    id = item.id;
+                }
+                    
+                var namesStr = "";
+                var paramStr = "";
+                var paramArr = [];
+                for (var j = 0; j < cfg.fieldNames.length; j++) {
+                    var k = cfg.fieldNames[j];
+                    if (paramArr.length > 0) {
+                        namesStr += ", ";
+                        paramStr += ", ";
+                    }
+                    namesStr += k;
+                    paramStr += "?";
+                    paramArr.push(item[k]);
+                }
+                if (paramArr.length > 0) {
+                    namesStr += ", ";
+                    paramStr += ", ";
+                }
+                namesStr += "id";
+                paramStr += "?";
+                paramArr.push(id);
+                
+                return new Promise(function(resolve, reject) {
+
+                    db.transaction(function (tx) {
+                        tx.executeSql('INSERT INTO ' + cfg.table + ' (' + namesStr + ') VALUES (' + paramStr + ')', 
+                            paramArr, 
+                            function(transaction, results){ 
+                                showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
+                                item.id = id;
+                                resolve(item);
+                            }, 
+                            function(err) { 
+                                showStatus("Error", null, err);
+                                reject(err);
+                            }
+                        );
+                    });
+                });
+            },
+            updateItem: function(item) { 
+                console.log(item);
+                var namesStr = "";
+                var paramArr = [];
+                for (var j = 0; j < cfg.fieldNames.length; j++) {
+                    var k = cfg.fieldNames[j];
+                    if (paramArr.length > 0) {
+                        namesStr += ", ";
+                    }
+                    namesStr += k;
+                    namesStr += " = ?";
+                    paramArr.push(item[k]);
+                }
+                paramArr.push(item["id"]);
+
+                return new Promise(function(resolve, reject) {
+                     db.transaction(function (tx) {
+                        tx.executeSql("UPDATE " + cfg.table + " SET " + namesStr + " WHERE id = ? ", 
+                            paramArr, 
+                            function(transaction, results){ 
+                                showStatus("Updated: " + results.rowsAffected);
+                                if (results.rowsAffected < 1) {
+                                    reject();
+                                } else {
+                                    resolve(item);
+                                }
+                            }, 
+                            function(err) { 
+                                showStatus("Error", null, err);
+                                reject(err);
+                            }
+                        );
+                     });
+                });
+            },
+            deleteItem: function(item) { 
+                console.log(item);
+                return new Promise(function(resolve, reject) {
+                    db.transaction(function (tx) {
+                        tx.executeSql('DELETE FROM ' + cfg.table + ' WHERE id = ? ', [item.id], 
+                            function(transaction, results){ 
+                                showStatus("Deleted: " + results.rowsAffected);
+                                resolve(item);
+                            }, 
+                            function(err) { 
+                                showStatus("Error", null, err);
+                                reject(err);
+                            }
+                        );
+                    });
+                });
+            }
+        }, 
+        
+        selectedRow: false,
+        rowClick: function(args) {
+            if ( this.selectedRow ) { this.selectedRow.children('.jsgrid-cell').css('background-color', ''); }
+            var $row = this.rowByItem(args.item);
+            $row.children('.jsgrid-cell').css('background-color','#F7B64B');
+            this.selectedRow = $row;
+        },
+        rowDoubleClick: function(args) {
+            var item = args.item;
+            
+            this.clearFilter();
+            
+            this._eachField(function(field) {
+                if(field.filtering) {
+                
+                    var props = field.name.split('.');
+                    var prop = props[0];
+                    
+                    if ("id" == prop) {
+                        field.filterControl.val(item.id);
+                    }
+                }
+            });
+            
+            this.search();
+        },
+ 
+        fields: cfg.fields
+    });
+
+}
+
+function dictBind(cfg) {
+    jsGrid.locale("ru");
+ 
+    $(cfg.div).jsGrid({
+        width: "100%",
+        height: "auto",
+        
+        pageLoading: true,        
+ 
+        inserting: true,
+        
+        filtering: true,
+        editing: true,
+        sorting: true,
+        paging: true,
+        autoload: true,
+ 
+        pagerContainer : $(cfg.divPager),
+        pageSize: SHOPPING.pageSize,
+        pageButtonCount: SHOPPING.pageButtonCount,
+ 
+        controller: {
+            loadData: function (filter) {
+                var pageIndex = filter.pageIndex;
+                var pageSize = filter.pageSize;
+                var sortField = cfg.sortField;
+                var sortOrder = "asc";
+                if ("sortField" in filter) {
+                    sortField = filter.sortField;
+                }
+                if ("sortOrder" in filter) {
+                    sortOrder = filter.sortOrder;
+                }
+                var whereClause = "";
+                var sqlArgsCnt = [];
+                var sqlArgs = [pageSize, ((pageIndex - 1) * pageSize)];
+                var filterVal = null;
+                
+                for (var j = 0; j < cfg.fieldNames.length; j++) {
+                    var k = cfg.fieldNames[j];
+                    filterVal = filter[k];
+                    if (!isEmpty(filterVal)) {
+                        if (whereClause.length > 0) {
+                            whereClause = " AND " + whereClause;
+                        }
+                        whereClause = (" " + k + " = ? ") + whereClause;
+                        sqlArgs.splice(0, 0, filterVal);
+                        sqlArgsCnt.splice(0, 0, filterVal);
+                    }
+                }
+                
+                filterVal = filter["id"];
+                if (!isEmpty(filterVal)) {
+                    if (whereClause.length > 0) {
+                        whereClause = " AND " + whereClause;
+                    }
+                    whereClause = " id = ? " + whereClause;
+                    sqlArgs.splice(0, 0, filterVal);
+                    sqlArgsCnt.splice(0, 0, filterVal);
+                }
+                if (whereClause.length > 0) {
+                    whereClause = "WHERE " + whereClause;
+                }
+                
+                console.log(filter, whereClause);
+                return new Promise(function(resolve, reject) {
+                    var itemsCount = 0;
+                    
+                    db.transaction(function (tx) {
+                        tx.executeSql("SELECT count(*) AS cnt FROM " + cfg.table + " " + whereClause, sqlArgsCnt, 
+                            function (tx, results) {
+                                var len = results.rows.length;
+                                if (len > 0) {
+                                    var rowIt = rowItem(results.rows,0);
+                                    itemsCount = rowIt.cnt;
+                                    
+                                    if (itemsCount > 0) {
+                                        tx.executeSql("SELECT * FROM " + cfg.table + " " + whereClause + " ORDER BY " + sortField + " " + sortOrder + " LIMIT ? OFFSET ? ", sqlArgs, 
+                                            function (tx, results) {
+                                                var len = results.rows.length;
+                                                var arr = [];
+                                                for(var i = 0; i < len; i++) {
+                                                    var rowIt = rowItem(results.rows,i);
+                                                    var obj = {};
+                                                    for (var j = 0; j < cfg.fieldNames.length; j++) {
+                                                        var k = cfg.fieldNames[j];
+                                                        obj[k] = rowIt[k];
+                                                    }
+                                                    obj.id = rowIt.id;
+                                                    arr.push(obj);
+                                                }
+                                                resolve({ data: arr, itemsCount: itemsCount });
+                                            },
+                                            function(err) { 
+                                                showStatus("Error", null, err);
+                                                reject(err);
+                                            }
+                                        );    
+                                    } else {
+                                        resolve({ data: [], itemsCount: itemsCount });
+                                    }
+                                    
+                                } else {
+                                    reject();
+                                }
+                            },
+                            function(err) { 
+                                showStatus("Error", null, err);
+                                reject(err);
+                            }
+                        );    
+
+                    });
+                    
+                });
+            },
+            insertItem: function(item) { 
+                console.log(item);
+                var id = cfg.idPrefix+UTIL.generateGuid();
+                if (item.id) {
+                    id = item.id;
+                }
+                    
+                var namesStr = "";
+                var paramStr = "";
+                var paramArr = [];
+                for (var j = 0; j < cfg.fieldNames.length; j++) {
+                    var k = cfg.fieldNames[j];
+                    if (paramArr.length > 0) {
+                        namesStr += ", ";
+                        paramStr += ", ";
+                    }
+                    namesStr += k;
+                    paramStr += "?";
+                    paramArr.push(item[k]);
+                }
+                if (paramArr.length > 0) {
+                    namesStr += ", ";
+                    paramStr += ", ";
+                }
+                namesStr += "id";
+                paramStr += "?";
+                paramArr.push(id);
+                
+                return new Promise(function(resolve, reject) {
+
+                    db.transaction(function (tx) {
+                        tx.executeSql('INSERT INTO ' + cfg.table + ' (' + namesStr + ') VALUES (' + paramStr + ')', 
+                            paramArr, 
+                            function(transaction, results){ 
+                                showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
+                                item.id = id;
+                                resolve(item);
+                            }, 
+                            function(err) { 
+                                showStatus("Error", null, err);
+                                reject(err);
+                            }
+                        );
+                    });
+                });
+            },
+            updateItem: function(item) { 
+                console.log(item);
+                var namesStr = "";
+                var paramArr = [];
+                for (var j = 0; j < cfg.fieldNames.length; j++) {
+                    var k = cfg.fieldNames[j];
+                    if (paramArr.length > 0) {
+                        namesStr += ", ";
+                    }
+                    namesStr += k;
+                    namesStr += " = ?";
+                    paramArr.push(item[k]);
+                }
+                paramArr.push(item["id"]);
+
+                return new Promise(function(resolve, reject) {
+                     db.transaction(function (tx) {
+                        tx.executeSql("UPDATE " + cfg.table + " SET " + namesStr + " WHERE id = ? ", 
+                            paramArr, 
+                            function(transaction, results){ 
+                                showStatus("Updated: " + results.rowsAffected);
+                                if (results.rowsAffected < 1) {
+                                    reject();
+                                } else {
+                                    resolve(item);
+                                }
+                            }, 
+                            function(err) { 
+                                showStatus("Error", null, err);
+                                reject(err);
+                            }
+                        );
+                     });
+                });
+            },
+            deleteItem: function(item) { 
+                console.log(item);
+                return new Promise(function(resolve, reject) {
+                    db.transaction(function (tx) {
+                        tx.executeSql('DELETE FROM ' + cfg.table + ' WHERE id = ? ', [item.id], 
+                            function(transaction, results){ 
+                                showStatus("Deleted: " + results.rowsAffected);
+                                resolve(item);
+                            }, 
+                            function(err) { 
+                                showStatus("Error", null, err);
+                                reject(err);
+                            }
+                        );
+                    });
+                });
+            }
+        }, 
+        
+        selectedRow: false,
+        rowClick: function(args) {
+            if ( this.selectedRow ) { this.selectedRow.children('.jsgrid-cell').css('background-color', ''); }
+            var $row = this.rowByItem(args.item);
+            $row.children('.jsgrid-cell').css('background-color','#F7B64B');
+            this.selectedRow = $row;
+        },
+        rowDoubleClick: function(args) {
+            var item = args.item;
+            
+            this.clearFilter();
+            
+            this._eachField(function(field) {
+                if(field.filtering) {
+                
+                    var props = field.name.split('.');
+                    var prop = props[0];
+                    
+                    if ("id" == prop) {
+                        field.filterControl.val(item.id);
+                    }
+                }
+            });
+            
+            this.search();
+        },
+ 
+        fields: cfg.fields
+    });
+
+}
+
+
+/*
+//user field
+//https://github.com/tabalinas/jsgrid/issues/865
+
+var gridSettings = JSON.parse(localStorage.getItem("gridSettings"));
+var grid = $("#jsGrid").data("JSGrid");
+
+grid.search(gridSettings.filter).done(function() {
+    grid.sort({
+    	field: gridSettings.sorting.sortField,
+        order: gridSettings.sorting.sortOrder
+    }).done(function() {
+        grid.option("pageIndex", gridSettings.pageIndex);
+    });
+});
+
+$("#saveSettings").on("click", function() {
+    localStorage.setItem("gridSettings", JSON.stringify({
+    	sorting: grid._sortingParams(),
+        pageIndex: grid.option("pageIndex"),
+        filter: grid.getFilter()
+    }));
+});
+*/
+
+dict({
+    val: SHOPPING.val,
+    valName: "shop",
+    div: "#jsGridShops",
+    divPager: "#jsGridPagerShops",
+    sortField: "name",
+    table: "shops",
+    fieldNames: ["name", "memo"], 
+    idPrefix: "shop",
+    fields: [
+        { name: "id", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "name", title: "Name", type: "text", width: 150, validate: "required" },
+        { name: "memo", title: "Comment", type: "text", width: 200, sorting: false },
+        { type: "control" }
+    ]
+    
+});
+
+dict({
+    val: SHOPPING.val,
+    valName: "category",
+    div: "#jsGridCategories",
+    divPager: "#jsGridPagerCategories",
+    sortField: "name",
+    table: "categories",
+    fieldNames: ["name", "memo"], 
+    idPrefix: "cat",
+    fields: [
+        { name: "id", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "name", title: "Name", type: "text", width: 150, validate: "required" },
+        { name: "memo", title: "Comment", type: "text", width: 200, sorting: false },
+        { type: "control" }
+    ]
+    
+});
+
+dict({
+    val: SHOPPING.val,
+    valName: "product",
+    div: "#jsGridProducts",
+    divPager: "#jsGridPagerProducts",
+    sortField: "name",
+    table: "products",
+    fieldNames: ["idcode", "name", "memo"], 
+    idPrefix: "prod",
+    fields: [
+        { name: "id", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "idcode", type: "text", width: 100, css: "hideOverflow" },
+        { name: "name", title: "Name", type: "text", width: 150, validate: "required" },
+        { name: "memo", title: "Comment", type: "text", width: 200, sorting: false },
+        { type: "control" }
+    ]
+    
+});
+
+
+////////////////////////////////////////////// 
+$(function() {    
+    var clients = [
+        { "Name": "Otto Clay", "Age": 25, "Country": 1, "Address": "Ap #897-1459 Quam Avenue", "Married": false },
+        { "Name": "Connor Johnston", "Age": 45, "Country": 2, "Address": "Ap #370-4647 Dis Av.", "Married": true },
+        { "Name": "Lacey Hess", "Age": 29, "Country": 3, "Address": "Ap #365-8835 Integer St.", "Married": false },
+        { "Name": "Timothy Henson", "Age": 56, "Country": 1, "Address": "911-5143 Luctus Ave", "Married": true },
+        { "Name": "Ramona Benton", "Age": 32, "Country": 3, "Address": "Ap #614-689 Vehicula Street", "Married": false }
+    ];
+ 
+    var countries = [
+        { Name: "", Id: 0 },
+        { Name: "United States", Id: 1 },
+        { Name: "Canada", Id: 2 },
+        { Name: "United Kingdom", Id: 3 }
+    ];
+ 
+    jsGrid.locale("ru");
+ 
+    $("#jsGrid").jsGrid({
+        width: "100%",
+        height: "auto",
+        
+        pageLoading: true,        
+ 
+        inserting: true,
+        
+        filtering: true,
+        editing: true,
+        sorting: true,
+        paging: true,
+        autoload: true,
+ 
+        pagerContainer : $("#jsGridPager"),
+        pageSize: 3,
+        pageButtonCount: 5,
+ 
+        deleteConfirm: "Do you really want to delete the client?",        
+ 
+        //data: clients,
+        controller: {
+            loadData: function (filter) {
+                console.log(filter);
+                return new Promise(function(resolve, reject) {
+                    resolve({ data: clients, itemsCount: 5 });
+                });
+                //return { data: clients, itemsCount: 5 };
+                //return clients;
+            }
+        }, 
+        
+        selectedRow: false,
+        rowClick: function(args) {
+            if ( this.selectedRow ) { this.selectedRow.children('.jsgrid-cell').css('background-color', ''); }
+            var $row = this.rowByItem(args.item);
+            $row.children('.jsgrid-cell').css('background-color','#F7B64B');
+            this.selectedRow = $row;
+        },        
+ 
+        fields: [
+            { name: "Name", type: "text", width: 150, validate: "required" },
+            { name: "Age", type: "number", width: 50 },
+            { name: "Address", type: "text", width: 200 },
+            { name: "Country", type: "select", items: countries, valueField: "Id", textField: "Name" },
+            { name: "Married", type: "checkbox", title: "Is Married", sorting: false },
+            { type: "control" }
+        ]
+    });
+});    
+</script>
+
+</html>
