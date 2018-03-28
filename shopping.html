@@ -158,6 +158,7 @@ div.tab button.active {
       <button class="tablinks" onclick="openTab(event, 'Category')" id="tabCategory">Categories</button>
       <button class="tablinks" onclick="openTab(event, 'Product')" id="tabProduct">Products</button>
       <button class="tablinks" onclick="openTab(event, 'ProdCat'); $('#jsGridProductCats').data('JSGrid').search()" id="tabProdCat">&amp;Categories</button>
+      <button class="tablinks" onclick="openTab(event, 'ProdShop'); $('#jsGridProductShops').data('JSGrid').search()" id="tabProdShop">&amp;Shops</button>
       <button class="tablinks" onclick="openTab(event, 'Errors')">Errors</button>
     </div>
 </div>
@@ -190,6 +191,13 @@ div.tab button.active {
         <div class="tcontent">
             <div id="jsGridPagerProductCats"></div>
             <div id="jsGridProductCats"></div>
+        </div>
+    </div>
+    <div id="ProdShop" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <div id="jsGridPagerProductShops"></div>
+            <div id="jsGridProductShops"></div>
         </div>
     </div>
     
@@ -591,7 +599,7 @@ function dict(cfg) {
 
 }
 
-function dictBindProdCat(cfg) {
+function dictBindMain(cfg) {
     jsGrid.locale("ru");
  
     $(cfg.div).jsGrid({
@@ -666,9 +674,9 @@ function dictBindProdCat(cfg) {
                 sqlArgs.push(pageSize);
                 sqlArgs.push((pageIndex - 1) * pageSize);
                 
-                
-                var sqlCnt = "SELECT count(*) AS cnt FROM (" + cfg.mainsql + ") " + filterClause;
-                var sql = "SELECT * FROM (" + cfg.mainsql + 
+                var mainsql = cfg.mainsql(cfg);
+                var sqlCnt = "SELECT count(*) AS cnt FROM (" + mainsql + ") " + filterClause;
+                var sql = "SELECT * FROM (" + mainsql + 
                     " ) " + filterClause + 
                     " ORDER BY " + sortField + " " + sortOrder + 
                     " LIMIT ? OFFSET ? ";
@@ -726,21 +734,13 @@ function dictBindProdCat(cfg) {
             },
             insertItem: function(item) { 
                 console.log(item);
-                var namesStr = "prodid, catid";
-                var paramStr = "?, ?";
-                var paramArr = [];
-                if (cfg.val.get("category") 
-                    && cfg.val.get("product")) {
-                    
-                    paramArr.push(cfg.val.get("product").id);
-                    paramArr.push(cfg.val.get("category").id);
-                }
+                var prm = cfg.insertItemParams(item, cfg);
 
                 return new Promise(function(resolve, reject) {
-                    if (paramArr.length == 2) {
+                    if (prm.paramArr.length > 0) {
                         db.transaction(function (tx) {
-                            tx.executeSql('INSERT INTO ' + cfg.table + ' (' + namesStr + ') VALUES (' + paramStr + ')', 
-                                paramArr, 
+                            tx.executeSql('INSERT INTO ' + cfg.table + ' (' + prm.namesStr + ') VALUES (' + prm.paramStr + ')', 
+                                prm.paramArr, 
                                 function(transaction, results){ 
                                     showStatus("Inserted: " + results.rowsAffected + " rows,  id=" + results.insertId);
                                     resolve(item);
@@ -758,16 +758,38 @@ function dictBindProdCat(cfg) {
             },
             updateItem: function(item) { 
                 console.log(item);
+                var prm = cfg.updateItemParams(item, cfg);
 
                 return new Promise(function(resolve, reject) {
-                    reject();
+                    if (prm.paramArr.length > 0) {
+                     db.transaction(function (tx) {
+                        tx.executeSql("UPDATE " + cfg.table + " SET " + prm.namesStr + " WHERE " + prm.whereStr, 
+                            prm.paramArr, 
+                            function(transaction, results){ 
+                                showStatus("Updated: " + results.rowsAffected);
+                                if (results.rowsAffected < 1) {
+                                    reject();
+                                } else {
+                                    resolve(item);
+                                }
+                            }, 
+                            function(err) { 
+                                showStatus("Error", null, err);
+                                reject(err);
+                            }
+                        );
+                     });
+                    } else {
+                        reject();
+                    }
                 });
             },
             deleteItem: function(item) { 
                 console.log(item);
+                var grid = this;
                 return new Promise(function(resolve, reject) {
                     db.transaction(function (tx) {
-                        tx.executeSql('DELETE FROM ' + cfg.table + ' WHERE prodid = ? AND catid = ?', [item.prodid, item.catid], 
+                        tx.executeSql(cfg.deleteSql(item, grid, cfg), cfg.deleteSqlParam(item, grid, cfg), 
                             function(transaction, results){ 
                                 showStatus("Deleted: " + results.rowsAffected);
                                 resolve(item);
@@ -884,7 +906,7 @@ dict({
                 '   FOREIGN KEY(catid) REFERENCES categories(id), PRIMARY KEY(prodid, catid) );'
 */
 
-dictBindProdCat({
+dictBindMain({
     val: SHOPPING.val,
     valName: "product",
     div: "#jsGridProductCats",
@@ -892,8 +914,10 @@ dictBindProdCat({
     sortField: "catname",
     table: "prodcat",
     fieldNames: ["prodid", "catid", "prodidcode", "prodname", "catname"], 
-    mainsql: "SELECT tb.prodid as prodid, tb.catid as catid, tc.name as catname, tp.name as prodname, tp.idcode as prodidcode FROM prodcat " +
-                    " tb, products tp, categories tc WHERE prodid = ? AND tb.prodid = tp.id AND tb.catid = tc.id ",
+    mainsql: function(cfg) {
+        return "SELECT tb.prodid as prodid, tb.catid as catid, tc.name as catname, tp.name as prodname, tp.idcode as prodidcode FROM prodcat " +
+                    " tb, products tp, categories tc WHERE prodid = ? AND tb.prodid = tp.id AND tb.catid = tc.id ";
+    },
     mainSqlParam: function(cfg) {
         var prod = cfg.val.get("product");
         if (prod) {
@@ -901,7 +925,47 @@ dictBindProdCat({
         }
         return [];
     },
-    idPrefix: "prod",
+    insertItemParams: function(item, cfg) { 
+        var ret = {};
+        ret.namesStr = "prodid, catid";
+        ret.paramStr = "?, ?";
+        var paramArr = [];
+        if (cfg.val.get("category") 
+            && cfg.val.get("product")) {
+            
+            paramArr.push(cfg.val.get("product").id);
+            paramArr.push(cfg.val.get("category").id);
+        }
+        ret.paramArr = paramArr;
+        return ret;
+    },
+    updateItemParams: function(item, cfg) { 
+        var ret = {};
+        ret.namesStr = "";
+        ret.whereStr = "id = ?"
+        var paramArr = [];
+        /* //there is no update
+        for (var j = 0; j < cfg.fieldNames.length; j++) {
+            var k = cfg.fieldNames[j];
+            if (paramArr.length > 0) {
+                ret.namesStr += ", ";
+            }
+            ret.namesStr += k;
+            ret.namesStr += " = ?";
+            paramArr.push(item[k]);
+        }
+        paramArr.push(item["id"]);
+        */
+        ret.paramArr = paramArr;
+        return ret;
+    },
+    
+    deleteSql: function(item) {
+        return 'DELETE FROM prodcat WHERE prodid = ? AND catid = ?';
+    },
+    deleteSqlParam: function(item) {
+        return [item.prodid, item.catid];
+    },
     fields: [
         { name: "prodid", type: "text", width: 50, css: "hideOverflow", editing: false },
         { name: "catid", type: "text", width: 50, css: "hideOverflow", editing: false },
@@ -913,6 +977,85 @@ dictBindProdCat({
     
 });
 
+/*
+                'CREATE TABLE IF NOT EXISTS shop_prod_code ' +
+                '  (id     TEXT NOT NULL PRIMARY KEY, ' +
+                '   name   TEXT NOT NULL,' +
+                '   prodid TEXT NOT NULL,' +
+                '   shopid TEXT NOT NULL,' +
+                '   FOREIGN KEY(prodid) REFERENCES products(id)' +
+                '   FOREIGN KEY(shopid) REFERENCES shops(id), ' +
+                '   CONSTRAINT uniq_shop_prod_code UNIQUE(prodid, shopid) );'
+*/
+dictBindMain({
+    val: SHOPPING.val,
+    valName: "product",
+    div: "#jsGridProductShops",
+    divPager: "#jsGridPagerProductShops",
+    sortField: "prodname", //
+    table: "shop_prod_code", //
+    fieldNames: ["id", "name", "prodid", "shopid", "prodidcode", "prodname", "shopname"], //
+    mainsql: function (cfg) { //
+        return "SELECT tb.id as id, tb.name as name, tb.prodid as prodid, tb.shopid as shopid, tc.name as shopname, tp.name as prodname, tp.idcode as prodidcode FROM shop_prod_code " +
+                    " tb, products tp, shops tc WHERE shopid = ? AND tb.prodid = tp.id AND tb.shopid = tc.id ";
+    },
+    mainSqlParam: function(cfg) { //
+        var prod = cfg.val.get("shop");
+        if (prod) {
+            return [prod.id];
+        }
+        return [];
+    },
+    insertItemParams: function(item, cfg) { //
+        var ret = {};
+        ret.namesStr = "prodid, shopid, id, name";
+        ret.paramStr = "?, ?, ?, ?";
+        var paramArr = [];
+        if (cfg.val.get("product") 
+            && cfg.val.get("shop")) {
+            
+            paramArr.push(cfg.val.get("product").id);
+            paramArr.push(cfg.val.get("shop").id);
+            var id = "spc" + UTIL.generateGuid();
+            if (!isEmpty(item.id)) {
+                id = item.id;
+            }
+            
+            paramArr.push(id);
+            paramArr.push(item.name);
+        }
+        ret.paramArr = paramArr;
+        return ret;
+    },
+    updateItemParams: function(item, cfg) { //
+        var ret = {};
+        ret.namesStr = " name = ? ";
+        ret.whereStr = "id = ?"
+        var paramArr = [];
+        paramArr.push(item["name"]);
+        paramArr.push(item["id"]);
+        ret.paramArr = paramArr;
+        return ret;
+    },
+    
+    deleteSql: function(item) { //
+        return 'DELETE FROM prodcat WHERE id = ?';
+    },
+    deleteSqlParam: function(item) { //
+        return [item.id];
+    },
+    fields: [ //
+        { name: "id", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "name", title: "Shop Code", type: "text", width: 150, editing: true },
+        { name: "prodid", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "shopid", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "prodidcode", title: "Code", type: "text", width: 100, css: "hideOverflow", editing: false },
+        { name: "prodname", title: "Product", type: "text", width: 150, editing: false },
+//        { name: "shopname", title: "Category", type: "text", width: 150, editing: false },
+        { type: "control" }
+    ]
+    
+});
 
 ////////////////////////////////////////////// 
 $(function() {    
