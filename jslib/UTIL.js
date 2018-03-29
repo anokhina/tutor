@@ -91,7 +91,18 @@ var UTIL = (function() {
         }
         return o;
     };
+
+    self.localDateString = function(d) {
+        var tzoffset = d.getTimezoneOffset() * 60000;
+        return (new Date(d - tzoffset)).toISOString().slice(0, -1);
+    };
     
+    self.localDateString2Date = function(ds) {
+        var d = new Date(ds);
+        var tzoffset = d.getTimezoneOffset() * 60000;
+        return (new Date(d + tzoffset));
+    };
+
     self.parseDate = function (str) {
         if (str) {
             str = str.trim();
