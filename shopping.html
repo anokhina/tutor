@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!--title>Привет</title-->
+<title>Покупки</title>
 
 <link type="text/css" rel="stylesheet" href="extlib/jsgrid/jsgrid.min.css" />
 <link type="text/css" rel="stylesheet" href="extlib/jsgrid/jsgrid-theme.min.css" />
-    
+
 <script type="text/javascript" src="extlib/jquery-3.3.1.js"></script>
+
 <script type="text/javascript" src="extlib/jsgrid/jsgrid.min.js"></script>
 <script type="text/javascript" src="extlib/jsgrid/i18n/jsgrid-ru.js"></script>
 
@@ -22,6 +23,58 @@
 //https://barcodes.olegon.ru/api/card/name/4607031758328
 //resize column
 //https://github.com/tabalinas/jsgrid/issues/9
+
+var HTML5DateField = function(config) {
+    jsGrid.Field.call(this, config);
+};
+ 
+HTML5DateField.prototype = new jsGrid.Field({
+ 
+    css: "date-field",            // redefine general property 'css'
+    align: "center",              // redefine general property 'align'
+ 
+    myCustomProperty: "foo",      // custom property
+ 
+    sorter: function(date1, date2) {
+        return new Date(date1) - new Date(date2);
+    },
+ 
+    itemTemplate: function(value) {
+        return new Date(value).toDateString();
+    },
+ 
+    insertTemplate: function(value) {
+        this._insertPicker = $("<input>").attr("type", "datetime-local");
+        return this._insertPicker;
+    },
+ 
+    editTemplate: function(value) {
+        this._editPicker = $("<input>").attr("type", "datetime-local");
+        //this._editPicker.val(UTIL.localDateString(new Date()));
+        return this._editPicker;
+    },
+    
+    filterTemplate: function(value) {
+        this._filterPicker = $("<input>").attr("type", "datetime-local");
+        //this._filterPicker.val(UTIL.localDateString(new Date()));
+        return this._filterPicker;
+    },
+ 
+    insertValue: function() {
+        return this._insertPicker.val();
+    },
+ 
+    editValue: function() {
+        return this._editPicker.val();
+    },
+    
+    filterValue: function() {
+        return this._filterPicker.val();
+    }
+});
+ 
+jsGrid.fields.date = HTML5DateField;    
+    
 </script>
   <style type="text/css">
 html, body {
@@ -155,6 +208,7 @@ div.tab button.active {
 
     <div class="tab">
       <button class="tablinks" onclick="openTab(event, 'Shops')" id="tabShops">Shops</button>
+      <button class="tablinks" onclick="openTab(event, 'Bills')" id="tabBills">&amp;Bills</button>
       <button class="tablinks" onclick="openTab(event, 'Category')" id="tabCategory">Categories</button>
       <button class="tablinks" onclick="openTab(event, 'Product')" id="tabProduct">Products</button>
       <button class="tablinks" onclick="openTab(event, 'ProdCat'); $('#jsGridProductCats').data('JSGrid').search()" id="tabProdCat">&amp;Categories</button>
@@ -170,6 +224,13 @@ div.tab button.active {
         <div class="tcontent">
             <div id="jsGridPagerShops"></div>
             <div id="jsGridShops"></div>
+        </div>
+    </div>
+    <div id="Bills" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <div id="jsGridPagerBills"></div>
+            <div id="jsGridBills"></div>
         </div>
     </div>
     <div id="Category" class="tabcontent">
@@ -280,10 +341,49 @@ var SHOPPING = {
                 '   FOREIGN KEY(shopid) REFERENCES shops(id), ' +
                 '   CONSTRAINT uniq_shop_prod_code UNIQUE(prodid, shopid) );'
             );
+            /*
+дата с временем
+сумма
+признак расчетаЖ прихода
+порядковый номер документа (ФД)
+заводской номер накопителя (ФН)
+фискальный признак документа (ФП)            
+            
+номер фискального документа;
+фискальный признак документа;
+номер смены;
+порядковый номер за смену;
+вид налогообложения и другие.
+
+
+ГАРАНТ.РУ: http://www.garant.ru/news/1099746/#ixzz5B46EuNDf
+            
+Параметр "n" отражает не вид системы налогообложения, а вид документа: 
+1 - Приход 
+2 - Возврат прихода 
+4 - Расход 
+5 - Возврат расхода 
+7 - Коррекция прихода 
+9 - Коррекция расхода            
+            */
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS shop_bill ' +
+                '  (id           TEXT NOT NULL PRIMARY KEY, ' +
+                '   name         TEXT NOT NULL,' +
+                '   memo         TEXT ,' +
+                '   billdate     datetime default current_timestamp,' +
+                '   qrcode       TEXT ,' +
+                '   discountpct  INTEGER DEFAULT 0,'  +
+                '   discount     INTEGER DEFAULT 0,'  +
+                '   money        INTEGER DEFAULT 0,'  +
+                '   shopid       TEXT NOT NULL,' +
+                '   FOREIGN KEY(shopid) REFERENCES shops(id) ' +
+                '   );'
+            );
         }
     );
 
-    UTILDB.showTable(db, "prodcat");
+    UTILDB.showTable(db, "shop_bill");
 function showStatus(m, o, exc) {
     var now = new Date().toISOString().slice(0,19).replace("T", " ");
     if (!o) {
@@ -633,7 +733,7 @@ function dictBindMain(cfg) {
 */
                 var sqlArgsCnt = [];
                 var mainSqlParam = cfg.mainSqlParam(cfg);
-                if (mainSqlParam && mainSqlParam.length > 0 ) {
+                if (mainSqlParam && mainSqlParam.length > 0 || cfg.mainSqlParamEmpty ) {
                     sqlArgsCnt = sqlArgsCnt.concat(mainSqlParam);
                 } else {
                     return new Promise(function(resolve, reject) {
@@ -1039,7 +1139,7 @@ dictBindMain({
     },
     
     deleteSql: function(item) { //
-        return 'DELETE FROM prodcat WHERE id = ?';
+        return 'DELETE FROM shop_prod_code WHERE id = ?';
     },
     deleteSqlParam: function(item) { //
         return [item.id];
@@ -1057,6 +1157,115 @@ dictBindMain({
     
 });
 
+/*
+                'CREATE TABLE IF NOT EXISTS shop_bill ' +
+                '  (id           TEXT NOT NULL PRIMARY KEY, ' +
+                '   name         TEXT NOT NULL,' +
+                '   memo         TEXT ,' +
+                '   billdate     datetime default current_timestamp,' +
+                '   qrcode       TEXT ,' +
+                '   discountpct  INTEGER DEFAULT 0,'  +
+                '   discount     INTEGER DEFAULT 0,'  +
+                '   money        INTEGER DEFAULT 0,'  +
+                '   shopid       TEXT NOT NULL,' +
+                '   FOREIGN KEY(shopid) REFERENCES shops(id) ' +
+                '   );'
+
+*/
+dictBindMain({
+    val: SHOPPING.val,
+    valName: "product",
+    div: "#jsGridBills",
+    divPager: "#jsGridPagerBills",
+    sortField: "name", //
+    table: "shop_bill", //
+    fieldNames: ["id", "name", "memo", "billdate", "qrcode", "discountpct", "discount", "money", "shopid", "shopname"], //
+    mainsql: function (cfg) { //
+        var prod = cfg.val.get("shop");
+        if (prod) {
+            return "SELECT tb.id as id, tb.name as name, tb.memo as memo, tb.billdate as billdate, tb.qrcode as qrcode, tb.discountpct as discountpct, "+
+                   " tb.discount as discount, tb.money as money, tb.shopid as shopid, tc.name as shopname FROM shop_bill " +
+                        " tb, shops tc WHERE shopid = ? AND tb.shopid = tc.id ";
+        }
+        return "SELECT tb.id as id, tb.name as name, tb.memo as memo, tb.billdate as billdate, tb.qrcode as qrcode, tb.discountpct as discountpct, "+
+               " tb.discount as discount, tb.money as money, tb.shopid as shopid, tc.name as shopname FROM shop_bill " +
+                    " tb, shops tc WHERE tb.shopid = tc.id ";
+    },
+    mainSqlParamEmpty: true,
+    mainSqlParam: function(cfg) { //
+        var prod = cfg.val.get("shop");
+        if (prod) {
+            return [prod.id];
+        }
+        return [];
+    },
+    updateFields: ["name", "memo", "billdate", "qrcode", "discountpct", "discount", "money"],
+    insertItemParams: function(item, cfg) { //
+        var ret = {};
+        ret.namesStr = "shopid, id, name, memo, billdate, qrcode, discountpct, discount, money";
+        ret.paramStr = "?, ?, ?, ?, ?, ?, ?, ?, ?";
+        var paramArr = [];
+        if (cfg.val.get("shop")) {
+            
+            paramArr.push(cfg.val.get("shop").id);
+            var id = "bill" + UTIL.generateGuid();
+            if (!isEmpty(item.id)) {
+                id = item.id;
+            }
+            
+            paramArr.push(id);
+            
+            this.updateFields.forEach(function(el){
+                paramArr.push(item[el]);
+            });
+        }
+        ret.paramArr = paramArr;
+        return ret;
+    },
+    updateItemParams: function(item, cfg) { //
+        var ret = {};
+        ret.namesStr = "";
+        ret.whereStr = "id = ?"
+        var paramArr = [];
+        
+        for (var i = 0; i < this.updateFields.length; i++) {
+            if (i > 0) {
+                ret.namesStr += ", ";
+            }
+            var el = this.updateFields[i];
+            ret.namesStr += (el + " = ? ");
+            paramArr.push(item[el]);
+            
+        }
+        paramArr.push(item["id"]);
+        ret.paramArr = paramArr;
+        return ret;
+    },
+    
+    deleteSql: function(item) { //
+        return 'DELETE FROM shop_bill WHERE id = ?';
+    },
+    deleteSqlParam: function(item) { //
+        return [item.id];
+    },
+    fields: [ //["billdate"]
+        { name: "id", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "name", type: "text", width: 150, editing: true },
+        { name: "shopid", type: "text", width: 50, css: "hideOverflow", editing: false },
+        
+        { name: "billdate", type: "date", width: 200 },
+//        { name: "shopname", title: "Shop", type: "text", width: 150, editing: false },
+        { name: "memo", title: "Comment", type: "text", width: 100, sorting: false },
+        { name: "qrcode", title: "QRCode", type: "text", width: 100, sorting: false },
+        
+        { name: "discountpct", type: "number", width: 100 },
+        { name: "discount", type: "number", width: 100 },
+        { name: "money", type: "number", width: 100 },
+
+        { type: "control" }
+    ]
+    
+});
 ////////////////////////////////////////////// 
 $(function() {    
     var clients = [
