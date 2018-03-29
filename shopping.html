@@ -40,7 +40,8 @@ HTML5DateField.prototype = new jsGrid.Field({
     },
  
     itemTemplate: function(value) {
-        return new Date(value).toDateString();
+        //return new Date(value).toISOString();
+        return value;
     },
  
     insertTemplate: function(value) {
@@ -50,12 +51,14 @@ HTML5DateField.prototype = new jsGrid.Field({
  
     editTemplate: function(value) {
         this._editPicker = $("<input>").attr("type", "datetime-local");
+        this._editPicker.val(value);
         //this._editPicker.val(UTIL.localDateString(new Date()));
         return this._editPicker;
     },
     
     filterTemplate: function(value) {
         this._filterPicker = $("<input>").attr("type", "datetime-local");
+        this._filterPicker.val(value);
         //this._filterPicker.val(UTIL.localDateString(new Date()));
         return this._filterPicker;
     },
@@ -292,6 +295,14 @@ function ObjectWrapper(obj) {
         }
         return undefined;
     }
+}
+function normalizeParam(arr) {
+    for (var i = 0; i < arr.length; i++) {
+        if (arr[i] === undefined) {
+            arr[i] = null;
+        }
+    }
+    return arr;
 }
 var SHOPPING = {
     pageSize : 3,
@@ -1219,7 +1230,7 @@ dictBindMain({
                 paramArr.push(item[el]);
             });
         }
-        ret.paramArr = paramArr;
+        ret.paramArr = normalizeParam(paramArr);
         return ret;
     },
     updateItemParams: function(item, cfg) { //
@@ -1238,7 +1249,7 @@ dictBindMain({
             
         }
         paramArr.push(item["id"]);
-        ret.paramArr = paramArr;
+        ret.paramArr = normalizeParam(paramArr);
         return ret;
     },
     
