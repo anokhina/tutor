@@ -46,21 +46,30 @@ HTML5DateField.prototype = new jsGrid.Field({
  
     insertTemplate: function(value) {
         this._insertPicker = $("<input>").attr("type", "datetime-local");
-        return this._insertPicker;
+        if (this.inserting) {
+            return this._insertPicker;
+        }
+        return this.itemTemplate(value);
     },
  
     editTemplate: function(value) {
         this._editPicker = $("<input>").attr("type", "datetime-local");
         this._editPicker.val(value);
         //this._editPicker.val(UTIL.localDateString(new Date()));
-        return this._editPicker;
+        if (this.editing) {
+            return this._editPicker;
+        }
+        return this.itemTemplate(value);
     },
     
     filterTemplate: function(value) {
         this._filterPicker = $("<input>").attr("type", "datetime-local");
         this._filterPicker.val(value);
         //this._filterPicker.val(UTIL.localDateString(new Date()));
-        return this._filterPicker;
+        if (this.filtering) {
+            return this._filterPicker;
+        }
+        return this.itemTemplate(value);
     },
  
     insertValue: function() {
@@ -200,6 +209,11 @@ div.tab button.active {
 .jsgrid-grid-body {
     padding-bottom: 20px;
 }
+#selObj {
+    margin-top: 50px;
+    width: 100%;
+    height: 100%;
+}
   </style>
 
 </head>
@@ -210,12 +224,13 @@ div.tab button.active {
     <div id="opstatus">Ok</div>
 
     <div class="tab">
-      <button class="tablinks" onclick="openTab(event, 'Shops')" id="tabShops">Shops</button>
-      <button class="tablinks" onclick="openTab(event, 'Bills')" id="tabBills">&amp;Bills</button>
-      <button class="tablinks" onclick="openTab(event, 'Category')" id="tabCategory">Categories</button>
-      <button class="tablinks" onclick="openTab(event, 'Product')" id="tabProduct">Products</button>
-      <button class="tablinks" onclick="openTab(event, 'ProdCat'); $('#jsGridProductCats').data('JSGrid').search()" id="tabProdCat">&amp;Categories</button>
-      <button class="tablinks" onclick="openTab(event, 'ProdShop'); $('#jsGridProductShops').data('JSGrid').search()" id="tabProdShop">&amp;Shops</button>
+      <button class="tablinks" onclick="openTab(event, 'Shops', '#jsGridShops')" id="tabShops">Shops</button>
+      <button class="tablinks" onclick="openTab(event, 'Bills', '#jsGridBills')" id="tabBills">&amp;Bills</button>
+      <button class="tablinks" onclick="openTab(event, 'BillList', '#jsGridBillList')" id="tabBillList">&amp;List</button>
+      <button class="tablinks" onclick="openTab(event, 'Category', '#jsGridCategories')" id="tabCategory">Categories</button>
+      <button class="tablinks" onclick="openTab(event, 'Product', '#jsGridProducts')" id="tabProduct">Products</button>
+      <button class="tablinks" onclick="openTab(event, 'ProdCat', '#jsGridProductCats');" id="tabProdCat">&amp;Categories</button>
+      <button class="tablinks" onclick="openTab(event, 'ProdShop', '#jsGridProductShops');" id="tabProdShop">&amp;Shops</button>
       <button class="tablinks" onclick="openTab(event, 'Errors')">Errors</button>
     </div>
 </div>
@@ -225,6 +240,7 @@ div.tab button.active {
     <div id="Shops" class="tabcontent">
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <div class="tcontent">
+            <div id="jsGridControlShops"></div>
             <div id="jsGridPagerShops"></div>
             <div id="jsGridShops"></div>
         </div>
@@ -232,13 +248,23 @@ div.tab button.active {
     <div id="Bills" class="tabcontent">
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <div class="tcontent">
+            <div id="jsGridControlBills"></div>
             <div id="jsGridPagerBills"></div>
             <div id="jsGridBills"></div>
+        </div>
+    </div>
+    <div id="BillList" class="tabcontent">
+        <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
+        <div class="tcontent">
+            <div id="jsGridControlBillList"></div>
+            <div id="jsGridPagerBillList"></div>
+            <div id="jsGridBillList"></div>
         </div>
     </div>
     <div id="Category" class="tabcontent">
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <div class="tcontent">
+            <div id="jsGridControlCategories"></div>
             <div id="jsGridPagerCategories"></div>
             <div id="jsGridCategories"></div>
         </div>
@@ -246,6 +272,7 @@ div.tab button.active {
     <div id="Product" class="tabcontent">
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <div class="tcontent">
+            <div id="jsGridControlProducts"></div>
             <div id="jsGridPagerProducts"></div>
             <div id="jsGridProducts"></div>
         </div>
@@ -253,6 +280,7 @@ div.tab button.active {
     <div id="ProdCat" class="tabcontent">
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <div class="tcontent">
+            <div id="jsGridControlProductCats"></div>
             <div id="jsGridPagerProductCats"></div>
             <div id="jsGridProductCats"></div>
         </div>
@@ -260,6 +288,7 @@ div.tab button.active {
     <div id="ProdShop" class="tabcontent">
         <span onclick="this.parentElement.style.display='none'" class="topright">x</span>
         <div class="tcontent">
+            <div id="jsGridControlProductShops"></div>
             <div id="jsGridPagerProductShops"></div>
             <div id="jsGridProductShops"></div>
         </div>
@@ -275,6 +304,8 @@ div.tab button.active {
     
 </div>
 
+<textarea id="selObj" rows="4" cols="50">
+</textarea>
 <div style = "display:none;">
             <div id="jsGridPager"></div>
             <div id="jsGrid"></div>
@@ -285,15 +316,33 @@ div.tab button.active {
 <script>
 
 function ObjectWrapper(obj) {
+    this.listeners = [];
     this.obj = obj;
     this.set = function(param, v)  {
+        var oldVal = this.get(param);
         this.obj[param] = v;
+        var arr = this.listeners;
+        for(var i = 0; i < arr.length; i++) {
+            arr[i](this.obj, param, oldVal, v);
+        }
     }
     this.get = function(param)  {
         if ( param && param in this.obj ) {
             return this.obj[param];
         }
         return undefined;
+    }
+    this.addListener = function(fn) {
+        this.listeners.push(fn);
+    }
+    this.removeListener = function(fn) {
+        var arr = this.listeners;
+        for(var i = 0; i < arr.length; i++) {
+            if(arr[i] === fn) {
+                arr.splice(i, 1);
+                break;
+            }
+        }    
     }
 }
 function normalizeParam(arr) {
@@ -309,6 +358,9 @@ var SHOPPING = {
     pageButtonCount: 5,
     val: new ObjectWrapper({})
 };
+SHOPPING.val.addListener(function(obj){
+    $("#selObj").val(JSON.stringify(obj, null, 4));
+});
 //    var id = __idprefix + "-" + UTIL.generateGuid();
 
     var db = openDatabase('sevnShopping', '1.0', 'Shopping db', 20 * 1024 * 1024);
@@ -391,10 +443,25 @@ var SHOPPING = {
                 '   FOREIGN KEY(shopid) REFERENCES shops(id) ' +
                 '   );'
             );
+            transaction.executeSql(
+                'CREATE TABLE IF NOT EXISTS shop_bill_prod ' +
+                '  (id           TEXT NOT NULL PRIMARY KEY, ' +
+                '   memo         TEXT ,' +
+                '   money        INTEGER DEFAULT 0,'  +
+                '   discountpct  INTEGER DEFAULT 0,'  +
+                '   discount     INTEGER DEFAULT 0,'  +
+                '   cnt          INTEGER DEFAULT 0,'  +
+                '   summoney     INTEGER DEFAULT 0,'  +
+                '   shopbillid   TEXT NOT NULL,' +
+                '   prodid       TEXT NOT NULL,' +
+                '   FOREIGN KEY(shopbillid) REFERENCES shop_bill(id), ' +
+                '   FOREIGN KEY(prodid) REFERENCES products(id) ' +
+                '   );'
+            );
         }
     );
 
-    UTILDB.showTable(db, "shop_bill");
+    UTILDB.showTable(db, "shop_bill_prod");
 function showStatus(m, o, exc) {
     var now = new Date().toISOString().slice(0,19).replace("T", " ");
     if (!o) {
@@ -415,7 +482,7 @@ function showStatus(m, o, exc) {
     }
 }
 
-function openTab(evt, tabName) {
+function openTab(evt, tabName, gridname) {
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tabcontent");
     for (i = 0; i < tabcontent.length; i++) {
@@ -430,6 +497,9 @@ function openTab(evt, tabName) {
         evt.currentTarget.className += " active";
     }
     window.scrollTo(0, 0);
+    if (gridname && $(gridname)) {
+        $(gridname).data('JSGrid').search();
+    }
 }
 
 function rowItem (results_rows, i) {
@@ -450,6 +520,12 @@ function isEmpty(obj) {
 
 function dict(cfg) {
     jsGrid.locale("ru");
+    
+    if ("divName" in cfg) {
+        cfg.div = "#jsGrid" + cfg.divName;
+        cfg.divPager = "#jsGridPager" + cfg.divName;
+        cfg.divControl = "#jsGridControl" + cfg.divName;
+    }
  
     $(cfg.div).jsGrid({
         width: "100%",
@@ -463,7 +539,7 @@ function dict(cfg) {
         editing: true,
         sorting: true,
         paging: true,
-        autoload: true,
+        autoload: !true,
  
         pagerContainer : $(cfg.divPager),
         pageSize: SHOPPING.pageSize,
@@ -708,11 +784,19 @@ function dict(cfg) {
         fields: cfg.fields
     });
 
+    if ("createColControls" in cfg && !cfg.createColControls) {} else {
+        createColControls(cfg);
+    }
 }
 
 function dictBindMain(cfg) {
     jsGrid.locale("ru");
  
+    if ("divName" in cfg) {
+        cfg.div = "#jsGrid" + cfg.divName;
+        cfg.divPager = "#jsGridPager" + cfg.divName;
+        cfg.divControl = "#jsGridControl" + cfg.divName;
+    }
     $(cfg.div).jsGrid({
         width: "100%",
         height: "auto",
@@ -725,12 +809,26 @@ function dictBindMain(cfg) {
         editing: true,
         sorting: true,
         paging: true,
-        autoload: true,
+        autoload: !true,
  
         pagerContainer : $(cfg.divPager),
         pageSize: SHOPPING.pageSize,
         pageButtonCount: SHOPPING.pageButtonCount,
  
+        onDataLoaded: function(args) {
+            if ("valName" in cfg && cfg.valName) {
+                var filter = this.getFilter();
+                if (args.data.data.length == 1) {
+                    if (!isEmpty(filter.id)) {
+                        cfg.val.set(cfg.valName, args.data.data[0]);
+                    }
+                } else {
+                    cfg.val.set(cfg.valName, null);
+                }
+                console.log(cfg.val);
+            }
+        },
+        
         controller: {
             loadData: function (filter) {
 /*
@@ -922,10 +1020,35 @@ function dictBindMain(cfg) {
             $row.children('.jsgrid-cell').css('background-color','#F7B64B');
             this.selectedRow = $row;
         },
- 
+        
+        rowDoubleClick: function(args) {
+            var item = args.item;
+            
+            this.clearFilter();
+            
+            this._eachField(function(field) {
+                if(field.filtering) {
+                
+                    var props = field.name.split('.');
+                    var prop = props[0];
+                    
+                    if ("id" == prop) {
+                        field.filterControl.val(item.id);
+                    }
+                }
+            });
+            
+            this.search(this.getFilter());
+            this.option("inserting", false);
+            this.option("filtering", true);
+        },
+
         fields: cfg.fields
     });
 
+    if ("createColControls" in cfg && !cfg.createColControls) {} else {
+        createColControls(cfg);
+    }
 }
 
 
@@ -957,8 +1080,7 @@ $("#saveSettings").on("click", function() {
 dict({
     val: SHOPPING.val,
     valName: "shop",
-    div: "#jsGridShops",
-    divPager: "#jsGridPagerShops",
+    divName: "Shops",
     sortField: "name",
     table: "shops",
     fieldNames: ["name", "memo"], 
@@ -975,8 +1097,7 @@ dict({
 dict({
     val: SHOPPING.val,
     valName: "category",
-    div: "#jsGridCategories",
-    divPager: "#jsGridPagerCategories",
+    divName: "Categories",
     sortField: "name",
     table: "categories",
     fieldNames: ["name", "memo"], 
@@ -993,8 +1114,7 @@ dict({
 dict({
     val: SHOPPING.val,
     valName: "product",
-    div: "#jsGridProducts",
-    divPager: "#jsGridPagerProducts",
+    divName: "Products",
     sortField: "name",
     table: "products",
     fieldNames: ["idcode", "name", "memo"], 
@@ -1019,15 +1139,21 @@ dict({
 
 dictBindMain({
     val: SHOPPING.val,
-    valName: "product",
-    div: "#jsGridProductCats",
-    divPager: "#jsGridPagerProductCats",
+    valName: null, //"product",
+    divName: "ProductCats",
     sortField: "catname",
     table: "prodcat",
     fieldNames: ["prodid", "catid", "prodidcode", "prodname", "catname"], 
+    mainSqlParamEmpty: true,
     mainsql: function(cfg) {
-        return "SELECT tb.prodid as prodid, tb.catid as catid, tc.name as catname, tp.name as prodname, tp.idcode as prodidcode FROM prodcat " +
-                    " tb, products tp, categories tc WHERE prodid = ? AND tb.prodid = tp.id AND tb.catid = tc.id ";
+        var prod = cfg.val.get("product");
+        if (prod) {
+            return "SELECT tb.prodid as prodid, tb.catid as catid, tc.name as catname, tp.name as prodname, tp.idcode as prodidcode FROM prodcat " +
+                        " tb, products tp, categories tc WHERE prodid = ? AND tb.prodid = tp.id AND tb.catid = tc.id ";
+        } else {
+            return "SELECT tb.prodid as prodid, tb.catid as catid, tc.name as catname, tp.name as prodname, tp.idcode as prodidcode FROM prodcat " +
+                        " tb, products tp, categories tc WHERE tb.prodid = tp.id AND tb.catid = tc.id ";
+        }
     },
     mainSqlParam: function(cfg) {
         var prod = cfg.val.get("product");
@@ -1086,7 +1212,7 @@ dictBindMain({
         { type: "control" }
     ]
     
-});
+}, true);
 
 /*
                 'CREATE TABLE IF NOT EXISTS shop_prod_code ' +
@@ -1100,15 +1226,21 @@ dictBindMain({
 */
 dictBindMain({
     val: SHOPPING.val,
-    valName: "product",
-    div: "#jsGridProductShops",
-    divPager: "#jsGridPagerProductShops",
+    valName: null, //"product",
+    divName: "ProductShops",
     sortField: "prodname", //
     table: "shop_prod_code", //
     fieldNames: ["id", "name", "prodid", "shopid", "prodidcode", "prodname", "shopname"], //
+    mainSqlParamEmpty: true,
     mainsql: function (cfg) { //
-        return "SELECT tb.id as id, tb.name as name, tb.prodid as prodid, tb.shopid as shopid, tc.name as shopname, tp.name as prodname, tp.idcode as prodidcode FROM shop_prod_code " +
-                    " tb, products tp, shops tc WHERE shopid = ? AND tb.prodid = tp.id AND tb.shopid = tc.id ";
+        var prod = cfg.val.get("shop");
+        if (prod) {
+            return "SELECT tb.id as id, tb.name as name, tb.prodid as prodid, tb.shopid as shopid, tc.name as shopname, tp.name as prodname, tp.idcode as prodidcode FROM shop_prod_code " +
+                        " tb, products tp, shops tc WHERE shopid = ? AND tb.prodid = tp.id AND tb.shopid = tc.id ";
+        } else {
+            return "SELECT tb.id as id, tb.name as name, tb.prodid as prodid, tb.shopid as shopid, tc.name as shopname, tp.name as prodname, tp.idcode as prodidcode FROM shop_prod_code " +
+                        " tb, products tp, shops tc WHERE tb.prodid = tp.id AND tb.shopid = tc.id ";
+        }
     },
     mainSqlParam: function(cfg) { //
         var prod = cfg.val.get("shop");
@@ -1167,6 +1299,35 @@ dictBindMain({
     ]
     
 });
+function createColControls(cfg) {
+    var controldiv = $(cfg.divControl);
+    var fields = $(cfg.div).data('JSGrid').fields;
+    for(var i = 0; i < fields.length; i++) {
+        var v = fields[i];
+        if (v.type !== "control") {
+            var n = v.name;
+            if ("title" in v && v.title) {
+                n = v.title;
+            }
+            (function(controldiv, cfgdiv, fname, n) {
+                var chboxdiv = $('<div class="inline"></div>');
+                chboxdiv.appendTo(controldiv);
+                var chbox = $('<input type="checkbox" checked=true />');
+                chbox.appendTo(chboxdiv);
+                var chboxLabel = $("<span>"+n+"</span>");
+                chboxLabel.appendTo(chboxdiv);
+                
+                chboxLabel.click (function() {
+                    chbox.click();
+                });
+                chbox.click(function() {
+                    $(cfgdiv).jsGrid("fieldOption", fname, "visible", chbox[0].checked);
+                });
+            })(controldiv, cfg.div, v.name, n);
+        }
+    };
+}
+
 
 /*
                 'CREATE TABLE IF NOT EXISTS shop_bill ' +
@@ -1185,9 +1346,8 @@ dictBindMain({
 */
 dictBindMain({
     val: SHOPPING.val,
-    valName: "product",
-    div: "#jsGridBills",
-    divPager: "#jsGridPagerBills",
+    valName: "bill",
+    divName: "Bills",
     sortField: "name", //
     table: "shop_bill", //
     fieldNames: ["id", "name", "memo", "billdate", "qrcode", "discountpct", "discount", "money", "shopid", "shopname"], //
@@ -1273,6 +1433,132 @@ dictBindMain({
         { name: "discount", type: "number", width: 100 },
         { name: "money", type: "number", width: 100 },
 
+        { type: "control" }
+    ]
+    
+});
+
+/*
+                'CREATE TABLE IF NOT EXISTS shop_bill_prod ' +
+                '  (id           TEXT NOT NULL PRIMARY KEY, ' +
+                '   memo         TEXT ,' +
+                '   money        INTEGER DEFAULT 0,'  +
+                '   discountpct  INTEGER DEFAULT 0,'  +
+                '   discount     INTEGER DEFAULT 0,'  +
+                '   cnt          INTEGER DEFAULT 0,'  +
+                '   summoney     INTEGER DEFAULT 0,'  +
+                '   shopbillid   TEXT NOT NULL,' +
+                '   prodid       TEXT NOT NULL,' +
+                '   FOREIGN KEY(shopbillid) REFERENCES shop_bill(id), ' +
+                '   FOREIGN KEY(prodid) REFERENCES products(id) ' +
+                '   );'
+
+*/
+dictBindMain({
+    val: SHOPPING.val,
+    valName: null, 
+    divName: "BillList",
+    sortField: "billdate", //
+    table: "shop_bill_prod", //
+    fieldNames: ["id", "memo", "money", "discountpct", "discount",  "cnt", "summoney", "shopbillid", "prodid", "prodname", "shopname", "billdate"], //
+    mainsql: function (cfg) { //
+        var prod = cfg.val.get("bill");
+        if (prod) {
+            return "SELECT tb.id as id, tb.memo as memo, tb.money as money, tb.discountpct as discountpct, "+
+                   " tb.discount as discount, tb.cnt as cnt, tb.summoney as summoney, tb.shopbillid as shopbillid, tb.prodid as prodid, " +
+                   "ts.billdate as billdate, tc.name as shopname, tp.name as prodname FROM shop_bill_prod " +
+                        " tb, shop_bill ts, products tp, shops tc WHERE shopbillid = ? AND tb.shopbillid = ts.id AND ts.shopid = tc.id " +
+                        " AND tb.prodid = tp.id " ;
+        }
+            return "SELECT tb.id as id, tb.memo as memo, tb.money as money, tb.discountpct as discountpct, "+
+                   " tb.discount as discount, tb.cnt as cnt, tb.summoney as summoney, tb.shopbillid as shopbillid, tb.prodid as prodid, " +
+                   "ts.billdate as billdate, tc.name as shopname, tp.name as prodname FROM shop_bill_prod " +
+                        " tb, shop_bill ts, products tp, shops tc WHERE tb.shopbillid = ts.id AND ts.shopid = tc.id " +
+                        " AND tb.prodid = tp.id " ;
+    },
+    mainSqlParamEmpty: true,
+    mainSqlParam: function(cfg) { //
+        var prod = cfg.val.get("bill");
+        if (prod) {
+            return [prod.id];
+        }
+        return [];
+    },
+    updateFields: ["memo", "money", "discountpct", "discount",  "cnt", "summoney"],
+    insertItemParams: function(item, cfg) { //
+        var ret = {};
+        ret.namesStr = "shopbillid, prodid, id, memo, money, discountpct, discount, cnt, summoney";
+        ret.paramStr = "?, ?, ?, ?, ?, ?, ?, ?, ?";
+        var paramArr = [];
+        if (cfg.val.get("product") && cfg.val.get("bill")) {
+            
+            paramArr.push(cfg.val.get("bill").id);
+            paramArr.push(cfg.val.get("product").id);
+            var id = "bpr" + UTIL.generateGuid();
+            if (!isEmpty(item.id)) {
+                id = item.id;
+            }
+            
+            paramArr.push(id);
+            
+            this.updateFields.forEach(function(el){
+                paramArr.push(item[el]);
+            });
+        }
+        debugger;
+        ret.paramArr = normalizeParam(paramArr);
+        return ret;
+    },
+    updateItemParams: function(item, cfg) { //
+        var ret = {};
+        ret.namesStr = "";
+        ret.whereStr = "id = ?"
+        var paramArr = [];
+        
+        for (var i = 0; i < this.updateFields.length; i++) {
+            if (i > 0) {
+                ret.namesStr += ", ";
+            }
+            var el = this.updateFields[i];
+            ret.namesStr += (el + " = ? ");
+            paramArr.push(item[el]);
+            
+        }
+        paramArr.push(item["id"]);
+        ret.paramArr = normalizeParam(paramArr);
+        return ret;
+    },
+    
+    deleteSql: function(item) { //
+        return 'DELETE FROM shop_bill_prod WHERE id = ?';
+    },
+    deleteSqlParam: function(item) { //
+        return [item.id];
+    },
+    fields: [
+        { name: "id", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "memo", title: "Comment", type: "text", width: 100, sorting: false },
+        { name: "money", type: "number", width: 100 },
+        { name: "discountpct", type: "number", width: 100 },
+        { name: "discount", type: "number", width: 100 },
+        { name: "cnt", type: "number", width: 100, 
+            validate: [ 
+                "required", 
+                {
+                    message: "wrong value",
+                    validator: function(value, item, param) { 
+                        debugger;
+                        return true;
+                    },
+                    param: []
+                }
+                ] },
+        { name: "summoney", type: "number", width: 100, validate: [ "required" ] },
+        { name: "shopbillid", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "prodid", type: "text", width: 50, css: "hideOverflow", editing: false },
+        { name: "prodname", title: "Product", type: "text", width: 150, editing: false },
+//        { name: "shopname", title: "Shop", type: "text", width: 150, editing: false },
+        { name: "billdate", type: "date", width: 200, editing: false, inserting: false },
         { type: "control" }
     ]
     
