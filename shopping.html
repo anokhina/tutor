@@ -24,26 +24,96 @@
 //resize column
 //https://github.com/tabalinas/jsgrid/issues/9
 
-var HTML5DateField = function(config) {
-    jsGrid.Field.call(this, config);
+function HTML5DateField(config) {
+    jsGrid.TextField.call(this, config);
 };
+
+function validateField(field, grid, item, $row, target) {
+    var ret = [];
+    if ("validate" in field && field.validate) {
+        var args = {
+            item: item,
+            itemIndex: grid._rowIndex($row),
+            row: $row
+        };
+        var fieldValue = grid._getItemFieldValue(item, field);
+        ret = grid._validation.validate($.extend({
+            value: fieldValue,
+            rules: field.validate
+        }, args));
+    }
+    if (target) {
+        var toolTipText = "";
+        if (ret.length > 0) {
+            ret.forEach(function(msg) {
+                toolTipText += msg;
+                toolTipText += "\n";
+            });
+            $(target).addClass("error");
+        } else {
+            $(target).removeClass("error");
+        }
+        target.title = toolTipText;//TODO show in status
+    }
+    return ret;
+}
+jsGrid.TextField.prototype.insertTemplate = function() {
+            if(!this.inserting)
+                return "";
+
+            var grid = this._grid,
+                $result = this.insertControl = this._createTextBox(),
+                field = this;
+
+            $result.focusout(function(e) {
+                var row = grid._insertRow;
+                var item = grid._getInsertItem();
+                var isval = validateField(field, grid, item, row, e.target);
+            });
+
+            return $result;
+        };
+jsGrid.TextField.prototype.editTemplate = function(value, item) {
+            if(!this.editing)
+                return this.itemTemplate.apply(this, arguments);
+
+            var grid = this._grid,
+                $result = this.editControl = this._createTextBox(),
+                field = this;
+            $result.val(value);
+
+            $result.focusout(function(e) {
+                var row = grid._getEditRow();
+                var item = grid._getEditedItem();
+                var isval = validateField(field, grid, item, row, e.target);
+            });
+
+            return $result;
+        };
+
+HTML5DateField.prototype = new jsGrid.TextField({
  
-HTML5DateField.prototype = new jsGrid.Field({
- 
-    css: "date-field",            // redefine general property 'css'
+    css: "datetime-field",            // redefine general property 'css'
     align: "center",              // redefine general property 'align'
  
     myCustomProperty: "foo",      // custom property
+    readOnly: false,
  
+    _createTextBox: function() {
+        return $("<input>").attr("type", "datetime-local")
+            .prop("readonly", !!this.readOnly);
+    },
+        
     sorter: function(date1, date2) {
         return new Date(date1) - new Date(date2);
     },
  
-    itemTemplate: function(value) {
+/* 
+    itemTemplate: function(value, item) {
         //return new Date(value).toISOString();
         return value;
     },
- 
+    
     insertTemplate: function(value) {
         this._insertPicker = $("<input>").attr("type", "datetime-local");
         if (this.inserting) {
@@ -83,6 +153,7 @@ HTML5DateField.prototype = new jsGrid.Field({
     filterValue: function() {
         return this._filterPicker.val();
     }
+    */
 });
  
 jsGrid.fields.date = HTML5DateField;    
@@ -216,6 +287,15 @@ div.tab button.active {
 }
 .hidden {
     display: none;
+}
+.jsgrid-insert-row > td > input {
+    background-color: #e3ffe5;
+}
+.error {
+    border-color: red !important;
+}
+.jsgrid-insert-row .required > input, .jsgrid-edit-row .required > input {
+    border-color: orange;
 }
   </style>
 
@@ -1092,7 +1172,7 @@ dict({
     idPrefix: "shop",
     fields: [
         { name: "id", type: "text", width: 50, css: "hideOverflow", editing: false },
-        { name: "name", title: "Name", type: "text", width: 150, validate: "required" },
+        { name: "name", title: "Name", type: "text", width: 150, validate: "required", css: "required" },
         { name: "memo", title: "Comment", type: "text", width: 200, sorting: false },
         { type: "control" }
     ]
@@ -1109,7 +1189,7 @@ dict({
     idPrefix: "cat",
     fields: [
         { name: "id", type: "text", width: 50, css: "hideOverflow", editing: false },
-        { name: "name", title: "Name", type: "text", width: 150, validate: "required" },
+        { name: "name", title: "Name", type: "text", width: 150, validate: "required", css: "required" },
         { name: "memo", title: "Comment", type: "text", width: 200, sorting: false },
         { type: "control" }
     ]
