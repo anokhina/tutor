@@ -24,6 +24,9 @@
 //resize column
 //https://github.com/tabalinas/jsgrid/issues/9
 
+//render row
+//https://jsfiddle.net/tabalinas/koja0mqp/
+
 function HTML5DateField(config) {
     jsGrid.TextField.call(this, config);
 };
@@ -606,7 +609,10 @@ function openTab(evt, tabName, gridname) {
     }
     window.scrollTo(0, 0);
     if (gridname && $(gridname)) {
-        $(gridname).data('JSGrid').search();
+        var grid = $(gridname).data('JSGrid');
+        if (grid.option("inserting") || grid._getEditRow() ) {} else {
+            grid.search();
+        }
     }
 }
 
@@ -868,6 +874,8 @@ function dict(cfg) {
             this.selectedRow = $row;
         },
         rowDoubleClick: function(args) {
+            if (this.option("inserting") || this._getEditRow() ) return;
+            
             var item = args.item;
             
             this.clearFilter();
@@ -1131,6 +1139,8 @@ function dictBindMain(cfg) {
         },
         
         rowDoubleClick: function(args) {
+            if (this.option("inserting") || this._getEditRow() ) return;
+            
             var item = args.item;
             
             this.clearFilter();
