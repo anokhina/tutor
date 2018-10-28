@@ -136,6 +136,9 @@ div.tab button.active {
 <body>
 
 <script>
+var DB_NAME = 'sevnPhones';
+var DB_NAME_FULL = 'Phones db';
+
 var UTIL = (function(e) {
     var self = {
     };
@@ -313,12 +316,88 @@ function saveObj2FS(obj, filePrefix) {
     
     var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
     var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
-    var filenameUname = "-" + "events" + "-";
+    var filenameUname = "-" + "phones" + "-";
     if (filePrefix) {
     } else {
         filePrefix = "exportData";
     }
     saveAs(blob, filePrefix+filenameUname+todayDate+".json");
+}
+function savePhone2FS(obj, filePrefix) {
+    var res = {};
+    for (let k in obj) {
+        let o = res[obj[k].cardid];
+        if (o) {
+        } else {
+            o = {};
+            //o.cardid = obj[k].cardid;
+            res[obj[k].cardid] = o;
+        }
+        o[obj[k].prop] = obj[k].pval;
+    }
+    console.log(obj, JSON.stringify( res, null, 2 ));
+    var text = "";
+    for (let k in res) {
+        let o = res[k];
+        text += "BEGIN:VCARD\n";
+        text += "VERSION:2.1\n";
+        for (let ko in o) {
+            if (ko.startsWith(CONST_VCARD_PHOTO) || ko.startsWith(CONST_VCARD_TEL) || 
+                ko.startsWith(CONST_VCARD_EMAIL) || ko.startsWith(CONST_VCARD_BDAY) || 
+                ko.startsWith(CONST_VCARD_ANNIVERSARY) || ko.startsWith(CONST_VCARD_URL) 
+                ) {
+
+                text += ko;
+                text += ":";
+                text += clearStr(o[ko]);
+                text += "\n";
+            } else if (ko == "N1" || ko == "N2" || ko == "N3" || ko == "N4" || ko == "N5") {
+            } else {
+                text += ko;
+                text += ";CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:";
+                text += encode8EQ(o[ko]);
+                text += "\n";
+            }
+        }
+        text += "N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:";
+        text += encode8EQ(o["N1"]) + ";" + encode8EQ(o["N2"]) + ";" + encode8EQ(o["N3"]) + ";" + encode8EQ(o["N4"]) + ";" + encode8EQ(o["N5"]);
+        text += "\n";
+        text += "END:VCARD\n\n";
+    }
+/*
+BEGIN:VCARD
+VERSION:2.1
+N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=30=34=2E=D0=91=D0=B0=D0=BB=D0=B0=D0=BD=D1=81;;;;
+FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=30=34=2E=D0=91=D0=B0=D0=BB=D0=B0=D0=BD=D1=81
+TEL;CELL;PREF:*100#
+END:VCARD
+*/
+
+    var blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+    var todayDate = new Date().toISOString().replace(/[T\.Z]/g, "_");
+    var filenameUname = "-" + "phones" + "-";
+    if (filePrefix) {
+    } else {
+        filePrefix = "exportData";
+    }
+    saveAs(blob, filePrefix+filenameUname+todayDate+".txt");
+}
+function clearStr(s) {
+    if (s) {
+
+    }
+    return s;
+}
+function encode8EQ(s) {
+    let text = "";
+    if (clearStr(s)) {
+        let arr8 = utf8encoder.encode(s);
+        for(let i = 0; i < arr8.length; i++) {
+            text += "=";
+            text += arr8[i].toString(16).toUpperCase();
+        }
+    }
+    return text;
 }
 function openTab(evt, tabName) {
     var i, tabcontent, tablinks;
@@ -397,12 +476,16 @@ function importData(text) {
     }
 }
 function importVCard(text, exists, callback) {
+    var linesDos = text.split("\r\n");
     var lines = text.split("\n");
+    if (linesDos.length == lines.length) {
+        lines = linesDos;
+    }
     var lastProp = null, obj = {}, robj = {};
     for(let i = 0; i < lines.length; i++) {
         if (lines[i].charAt(0) === ' ') {
             if (lastProp) {
-                obj[lastProp] = obj[lastProp] + lines[i];
+                obj[lastProp] = obj[lastProp] + "\n" + lines[i];
             }
         } else if (lines[i].charAt(0) === '=' ) {
             if (lastProp) {
@@ -494,6 +577,7 @@ function fromEncodedValue(str) {
     return ret;
 }
 var utf8decoder = new TextDecoder('utf-8');
+var utf8encoder = new TextEncoder('utf-8');
 function fromEncoded(str) {
     var charArr = str.split("=");
     var intArr = [];
@@ -510,6 +594,10 @@ function fromEncoded(str) {
     }
     return utf8decoder.decode(new Uint8Array(intArr));
 }
+function exportFoundData() {
+    showPhones(db, null, savePhone2FS );
+}
+
 </script>
 <div class="controldiv">
 
@@ -539,7 +627,7 @@ function fromEncoded(str) {
                 <tr>
                     <td>
                         <table border=0 style="width:100%">
-                            <tr><td style="width:1%">Property:</td><td><input type="text" id="feprop" name="feprop" style="width:99%" value="adr%"/></td></tr>
+                            <tr><td style="width:1%">Property:</td><td><input type="text" id="feprop" name="feprop" style="width:99%" value="FN%"/></td></tr>
                             <tr><td style="width:1%">Name:</td><td><input type="text" id="fename" name="fename" style="width:99%" value="%"/></td></tr>
                         </table>
                     </td>
@@ -592,6 +680,7 @@ function fromEncoded(str) {
                     <td>
                         <button type="reset" value="Reset">Reset</button>
                         <input type="button" onclick="showTables()" value="Log"/>
+                        <input type="button" onclick="exportFoundData()" value="Save found"/>
                     </td>
                 </tr>
             </table>
@@ -1214,7 +1303,7 @@ showTable(db, "phoneProp");
 }
 
 document.getElementById('files').addEventListener('change', handleFileSelect, false);
-    var db = openDatabase('sevnPhones', '1.0', 'Phones db', 20 * 1024 * 1024);
+    var db = openDatabase(DB_NAME, '1.0', DB_NAME_FULL, 20 * 1024 * 1024);
 //dropTables(db, ["phoneProp", "idphone"]);
     
     db.transaction(
