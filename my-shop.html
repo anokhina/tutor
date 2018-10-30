@@ -1,0 +1,92 @@
+<body>
+<form id="linkForm">
+<textarea rows=40 cols=80 id="talinks">
+https://my-shop.ru/shop/books/3354500.html
+https://my-shop.ru/shop/toys/1748190.html
+</textarea>
+<input type="button" value="add to cart" onclick="addToCart()" />
+</form>
+</body>
+
+<script>
+var linksStr = ``;
+var goodid = [];
+
+function addToCart() {
+    createForms(document.getElementById("talinks").value);
+}
+
+function prepareForms(linksStr) {
+    var linksLines = linksStr.split("\n");
+    for (let i = 0; i < linksLines.length; i++) {
+        linksLines[i] = linksLines[i].trim();
+        if (linksLines[i].length > 0) {
+            if (linksLines[i].endsWith(".html")) {
+                linksLines[i] = linksLines[i].substring(0, linksLines[i].length - 5);
+                if (linksLines[i].lastIndexOf("/") >=0 ) {
+                    goodid.push(linksLines[i].substring(linksLines[i].lastIndexOf("/") + 1));
+                }
+            }
+        }
+    }
+}
+
+function createForm(goodid) {
+    var f = document.createElement("form");
+    f.setAttribute('target',"_blank");
+    f.setAttribute('method',"post");
+    f.setAttribute('action',"https://my-shop.ru/my/cart");
+
+    {
+        let i = document.createElement("input");
+        i.setAttribute('type',"hidden");
+        i.setAttribute('name',"id");
+        i.setAttribute('value',goodid);
+        f.appendChild(i);
+    }
+
+    {
+        let i = document.createElement("input");
+        i.setAttribute('type',"text");
+        i.setAttribute('name',"quantity");
+        i.setAttribute('value', 1);
+        i.setAttribute('id', goodid);
+        f.appendChild(i);
+    }
+
+    {
+        let s = document.createElement("input");
+        s.setAttribute('type',"submit");
+        s.setAttribute('value',"Купить " + goodid);
+        f.appendChild(s);
+    }
+    document.body.appendChild(f);
+    return f;
+}
+
+function createForms(linksStr) {
+    prepareForms(linksStr);
+    var forms = [];
+    for (let i = 0; i < goodid.length;  i++) {
+        forms.push(createForm(goodid[i]));
+    }
+
+    let d = document.createElement("div");
+    document.body.appendChild(d);
+    let i = 0;
+    for (; i < forms.length; i++) {
+        let j = i, f = forms[i];
+        console.log(j, f.getAttribute("action"));
+        setTimeout(function(){ 
+            f.submit();
+            d.innerHTML = "Submited:" + j;
+            document.body.removeChild(f);
+        }, i*500);
+    }
+    setTimeout(function(){ 
+        d.innerHTML = "READY";
+    }, i*500);
+}
+
+</script>
+
