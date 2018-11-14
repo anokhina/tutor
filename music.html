@@ -1,0 +1,345 @@
+<!DOCTYPE HTML>
+<!--
+Copyright 2018 Veronica Anokhina.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<head>
+<meta charset="utf-8">
+
+</head>
+
+<pre id="log"></pre>
+
+<script>
+
+function log(arg) {
+  var logger = document.getElementById('log');
+  logger.innerHTML += arg + '<br />';
+}
+
+var _do = {
+  name: "do",
+  bton: 0.5,
+  dton: 1,
+  dies: true,
+  bemol: false,
+  prev: "si",
+  next: "re"
+},
+_re = {
+  name: "re",
+  dton: 1,
+  bton: 1,
+  dies: true,
+  bemol: true,
+  prev: "do",
+  next: "mi"
+},
+_mi = {
+  name: "mi",
+  dton: 0.5,
+  bton: 1,
+  dies: false,
+  bemol: true,
+  prev: "re",
+  next: "fa"
+},
+_fa = {
+  name: "fa",
+  dton: 1,
+  bton: 0.5,
+  dies: true,
+  bemol: false,
+  prev: "mi",
+  next: "sol"
+},
+_sol = {
+  name: "sol",
+  dton: 1,
+  bton: 1,
+  dies: true,
+  bemol: true,
+  prev: "fa",
+  next: "la"
+},
+_la = {
+  name: "la",
+  dton: 1,
+  bton: 1,
+  dies: true,
+  bemol: true,
+  prev: "sol",
+  next: "si"
+},
+_si = {
+  name: "si",
+  dton: 0.5,
+  bton: 1,
+  dies: false,
+  bemol: true,
+  prev: "la",
+  next: "do"
+}
+;
+
+var _ch1 = {
+name: "ч1",
+notes: 0,
+dist: 0
+}, 
+_m2 = {
+name: "м2",
+notes: 1,
+dist: 0.5
+}, 
+_b2 = {
+name: "б2",
+notes: 1,
+dist: 1
+}, 
+_m3 = {
+name: "м3",
+notes: 2,
+dist: 1.5
+}, 
+_b3 = {
+name: "б3",
+notes: 2,
+dist: 2
+}, 
+_ch4 = {
+name: "ч4",
+notes: 3,
+dist: 2.5
+}, 
+_triton = {
+name: "тритон",
+type: "Тритон",
+dist: 3
+}, 
+_ch5 = {
+name: "ч5",
+notes: 4,
+dist: 3.5
+}, 
+_m6 = {
+name: "м6",
+notes: 5,
+dist: 4
+}, 
+_b6 = {
+name: "б6",
+notes: 5,
+dist: 4.5
+}, 
+_m7 = {
+name: "м7",
+notes: 6,
+dist: 5
+}, 
+_b7 = {
+name: "б7",
+notes: 6,
+dist: 5.5
+}, 
+_ch8 = {
+name: "ч8",
+notes: 7,
+dist: 6
+};
+var intervals = [_ch1, _m2, _b2, _m3, _b3, _ch4, _triton, _ch5, _m6, _b6, _m7, _b7, _ch8];
+var _trezB53 = {name: "Б53", type: "мажорное", is: [_b3, _m3]},
+_trezM53 = {name: "М53", type: "минорное", is: [_m3, _b3]},
+_trezUv53 = {name: "Ув53", type: "увеличенное", is: [_b3, _b3]},
+_trezUm53 = {name: "Ум53", type: "уменьшённое", is: [_m3, _m3]},
+
+_otrezvB6 = {name: "Б6", type: "Мажорный секстаккорд", is: [_m3, _ch4]},
+_otrezvB64 = {name: "Б64", type: "Мажорный квартсекстаккорд", is: [_ch4, _b3]},
+_otrezvM6 = {name: "М6", type: "Минорный секстаккорд", is: [_b3, _ch4]},
+_otrezvM64 = {name: "М64", type: "Минорный квартсекстаккорд", is: [_ch4, _m3]}
+;
+var trezvs = [_trezB53, _trezM53, _trezUv53, _trezUm53, _otrezvB6, _otrezvB64, _otrezvM6, _otrezvM64];
+
+var mazhor = [1,  1, 0.5,1,  1,  1,0.5];
+var minor =  [1, 0.5, 1, 1, 0.5, 1, 1];
+
+var intervalMap = {};
+for (var i = 0; i < intervals.length; i++) {
+  intervals[i].idx = i;
+  intervalMap[intervals[i].name] = intervals[i];
+  if (intervals[i].name.startsWith("ч")) {
+    intervals[i].type = "Консонанс совершенный";
+  } else if (intervals[i].name in {"м3":1, "б3":1, "м6":1, "б6":1 }) {
+    intervals[i].type = "Консонанс несовершенный";
+  } else if (intervals[i].name in {"м2":1, "б2":1, "м7":1, "б7":1 }) {
+    intervals[i].type = "Диссонанс";
+  }
+}
+console.log(intervals);
+
+var notes = [_do, _re, _mi, _fa, _sol, _la, _si];
+var noteMap = {};
+for (var i = 0; i < notes.length; i++) {
+  notes[i].idx = i;
+  noteMap[notes[i].name] = notes[i];
+}
+
+function trezv(nn, trez, up) {
+  if (up) {
+    var nn2 = interval(nn, trez.is[0].name, true);
+    var nn3 = interval(nn2, trez.is[1].name, true);
+    return [nn, nn2, nn3];
+  } else {
+    var nn2 = interval(nn, trez.is[1].name, !true);
+    var nn3 = interval(nn2, trez.is[0].name, !true);
+    return [nn, nn2, nn3];
+  }
+}
+
+function printNoteTrezvu4ie(trez, nn) {
+  if(nn) {
+      var res = { "up": trezv(nn, trez, true) , "dn": trezv(nn, trez, !true) };
+      log(trez.name + ": " + nn + " ^ " + res["up"] + " - " + res["dn"]);
+  } else {
+      log(trez.name + ": " + trez.type + " = " + trez.is[0].name + "+" + trez.is[1].name);
+  }
+}
+function printTrezvu4ie() {
+  trezvs.forEach(function(el){ 
+    printNoteTrezvu4ie(el);
+    for (var i = 0; i < notes.length; i++) {
+      var nn = notes[i].name;
+      printNoteTrezvu4ie(el, nn);
+    }
+  });
+}
+
+function printNoteInterval(nn, intr) {
+      var res = { "up": interval(nn, intr.name, true) , "dn": interval(nn, intr.name, !true) };
+      log(intr.name + ": " + nn + " ^ " + res["up"] + " - " + res["dn"]);
+}
+
+function printInterval(intr) {
+  log(intr.name+ " - " + intr.type);
+  if ("notes" in intr) {
+    for (var i = 0; i < notes.length; i++) {
+      var nn = notes[i].name;
+      printNoteInterval(nn, intr);
+      if (notes[i].bton == 1) {
+        nn = notes[i].name + getSign(-0.5);
+        printNoteInterval(nn, intr);
+      }
+      if (notes[i].dton == 1) {
+        nn = notes[i].name + getSign(0.5);
+        printNoteInterval(nn, intr);
+      }
+    }
+  }
+}
+
+function printAllNotes() {
+for (var j = 0; j < intervals.length; j++) {
+  printInterval(intervals[j]);
+  log("");
+}
+}
+
+function noteTone(onoteName, tonalnost) {
+    var noteName = onoteName;
+    var decr = 0;
+    if (noteName.endsWith(getSign(0.5))) {
+      decr = 0.5;
+      noteName = noteName.substring(0, noteName.length - 1);
+    } else if (noteName.endsWith(getSign(-0.5))) {
+      decr = -0.5;
+      noteName = noteName.substring(0, noteName.length - 1);
+    }
+    var nn = noteMap[noteName];
+
+    var noteLine = [onoteName];
+    var nextNote = noteMap[nn.next];
+    var dist = decr * -1;
+    for (var i = 0; i < mazhor.length; i++) {
+      dist = tonalnost[i] - nextNote.bton - dist;
+      noteLine.push(nextNote.name + getSign(dist));
+      nextNote = noteMap[nextNote.next];
+      dist = dist * -1;
+    }
+    return noteLine;
+}
+
+function printAllTones() {
+  var notesToPrint = notes.map(n => n.name);
+  ["fa", "do"].map(n => n + getSign(0.5)).forEach(function(e){ notesToPrint.push(e); }); 
+  ["si", "mi", "la", "re", "sol", "do"].map(n => n + getSign(-0.5)).forEach(function(e){ notesToPrint.push(e); }); 
+
+  notesToPrint.forEach(function(e){
+    log("mazhor:" + e + ":" + noteTone(e, mazhor));
+  });
+  log("");
+
+  notesToPrint = notes.map(n => n.name);
+  ["fa", "do", "sol", "re", "la"].map(n => n + getSign(0.5)).forEach(function(e){ notesToPrint.push(e); }); 
+  ["si", "mi", "la"].map(n => n + getSign(-0.5)).forEach(function(e){ notesToPrint.push(e); }); 
+
+  notesToPrint.forEach(function(e){
+    log("minor:" + e + ":" + noteTone(e, minor));
+  });
+
+}
+
+printAllNotes();
+//printInterval(_ch5);
+  log("");
+printTrezvu4ie();
+  log("");
+printAllTones();
+
+
+function getSign(d) {
+  if (d > 0) {
+    return "#";
+  } else if (d < 0) {
+    return String.fromCharCode(parseInt("0x266D",16));
+  }
+  return "";
+}
+
+function interval(noteName, intervalName, up) {
+    var interval = intervalMap[intervalName];
+    var decr = 0;
+    if (noteName.endsWith(getSign(0.5))) {
+      decr = 0.5;
+      noteName = noteName.substring(0, noteName.length - 1);
+    } else if (noteName.endsWith(getSign(-0.5))) {
+      decr = -0.5;
+      noteName = noteName.substring(0, noteName.length - 1);
+    }
+    var note = noteMap[noteName];
+    var res = note;
+    var dist = 0;
+
+    for(var n = 0; n < interval.notes; n++) {
+      if (up) {
+        res = noteMap[res.next];
+        dist += res.bton;
+      } else {
+        res = noteMap[res.prev];
+        dist += res.dton;
+      }
+    }
+    return res.name + getSign(interval.dist - dist + decr);
+}
+
+</script>
