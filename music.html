@@ -170,6 +170,8 @@ _otrezvM6 = {name: "М6", type: "Минорный секстаккорд", is: [
 _otrezvM64 = {name: "М64", type: "Минорный квартсекстаккорд", is: [_ch4, _m3]}
 ;
 var trezvs = [_trezB53, _trezM53, _trezUv53, _trezUm53, _otrezvB6, _otrezvB64, _otrezvM6, _otrezvM64];
+var trezvs_mazhor = [_trezB53, _otrezvB6, _otrezvB64];
+var trezvs_minor = [_trezM53, _otrezvM6, _otrezvM64];
 
 var mazhor = [1,  1, 0.5,1,  1,  1,0.5];
 var minor =  [1, 0.5, 1, 1, 0.5, 1, 1];
@@ -207,22 +209,34 @@ function trezv(nn, trez, up) {
   }
 }
 
-function printNoteTrezvu4ie(trez, nn) {
+function printNoteTrezvu4ie(trez, nn, alternative) {
   if(nn) {
       var res = { "up": trezv(nn, trez, true) , "dn": trezv(nn, trez, !true) };
-      log(trez.name + ": " + nn + " ^ " + res["up"] + " - " + res["dn"]);
+      if (alternative) {
+        log(alternative + ":" + trez.name + ": " + nn + " ^ " + res["up"] );
+      } else {
+        log(trez.name + ": " + nn + " ^ " + res["up"] + " - " + res["dn"]);
+      }
   } else {
       log(trez.name + ": " + trez.type + " = " + trez.is[0].name + "+" + trez.is[1].name);
   }
 }
-function printTrezvu4ie() {
+var stupenName = {1: "T", 4 : "S", 5: "D"};
+function printTrezvu4ie(trezvs, notes, stupen) {
   trezvs.forEach(function(el){ 
-    printNoteTrezvu4ie(el);
-    for (var i = 0; i < notes.length; i++) {
-      var nn = notes[i].name;
-      printNoteTrezvu4ie(el, nn);
+  	if (!stupen) {
+      printNoteTrezvu4ie(el);
+      for (var i = 0; i < notes.length; i++) {
+        var nn = notes[i].name;
+        printNoteTrezvu4ie(el, nn);
+      }
+    } else {
+      printNoteTrezvu4ie(el, notes[stupen - 1], stupenName[stupen]);
     }
   });
+}
+function printTrezvu4ies() {
+	printTrezvu4ie(trezvs, notes);
 }
 
 function printNoteInterval(nn, intr) {
@@ -285,7 +299,12 @@ function printAllTones() {
   ["si", "mi", "la", "re", "sol", "do"].map(n => n + getSign(-0.5)).forEach(function(e){ notesToPrint.push(e); }); 
 
   notesToPrint.forEach(function(e){
-    log("mazhor:" + e + ":" + noteTone(e, mazhor));
+  	let noteOrder = noteTone(e, mazhor);
+  	///////////////////////
+    log("\nmazhor:" + e + ":" + noteOrder);
+    printTrezvu4ie(trezvs_mazhor, noteOrder, 1);
+    printTrezvu4ie(trezvs_mazhor, noteOrder, 4);
+    printTrezvu4ie(trezvs_mazhor, noteOrder, 5);
   });
   log("");
 
@@ -294,7 +313,11 @@ function printAllTones() {
   ["si", "mi", "la"].map(n => n + getSign(-0.5)).forEach(function(e){ notesToPrint.push(e); }); 
 
   notesToPrint.forEach(function(e){
-    log("minor:" + e + ":" + noteTone(e, minor));
+  	let noteOrder = noteTone(e, minor);
+    log("\nminor:" + e + ":" + noteOrder);
+    printTrezvu4ie(trezvs_minor, noteOrder, 1);
+    printTrezvu4ie(trezvs_minor, noteOrder, 4);
+    printTrezvu4ie(trezvs_minor, noteOrder, 5);
   });
 
 }
@@ -302,7 +325,7 @@ function printAllTones() {
 printAllNotes();
 //printInterval(_ch5);
   log("");
-printTrezvu4ie();
+printTrezvu4ies();
   log("");
 printAllTones();
 
