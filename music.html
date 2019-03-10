@@ -218,7 +218,9 @@ function printNoteTrezvu4ie(trez, nn, alternative) {
         log(trez.name + ": " + nn + " ^ " + res["up"] + " - " + res["dn"]);
       }
   } else {
-      log(trez.name + ": " + trez.type + " = " + trez.is[0].name + "+" + trez.is[1].name);
+      var idist1 = intervalMap[trez.is[0].name].dist;
+      var idist2 = intervalMap[trez.is[1].name].dist;
+      log(trez.name + ": " + trez.type + " = " + trez.is[0].name + "+" + trez.is[1].name + "  [" + idist1 + "+" + idist2 + "]");
   }
 }
 var stupenName = {1: "T", 4 : "S", 5: "D"};
@@ -240,12 +242,15 @@ function printTrezvu4ies() {
 }
 
 function printNoteInterval(nn, intr) {
+    var idist = intervalMap[intr.name].dist;
+
       var res = { "up": interval(nn, intr.name, true) , "dn": interval(nn, intr.name, !true) };
-      log(intr.name + ": " + nn + " ^ " + res["up"] + " - " + res["dn"]);
+      log(intr.name + ": " + idist + ": " + nn + " ^ " + res["up"] + " " + String.fromCharCode(0x2193) + " " + res["dn"]);
 }
 
 function printInterval(intr) {
-  log(intr.name+ " - " + intr.type);
+    var idist = intervalMap[intr.name].dist;
+  log(intr.name + " [" + idist + "] - " + intr.type);
   if ("notes" in intr) {
     for (var i = 0; i < notes.length; i++) {
       var nn = notes[i].name;
